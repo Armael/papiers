@@ -56,17 +56,17 @@ let _ =
   let query_elts = ref [] in
 
   Arg.parse [
-    "-add", Arg.String (add_doc doc_to_add), "Add the document passed in argument to the db";
+    "-a", Arg.String (add_doc doc_to_add), "Add the document passed in argument to the db";
 
-    "-add-source", Arg.Tuple [Arg.Int (fun i -> (fst source_to_add) := Some i);
+    "--add-source", Arg.Tuple [Arg.Int (fun i -> (fst source_to_add) := Some i);
                               Arg.String (fun s -> (snd source_to_add) := Some s)],
     "Add a source to an existing document. Syntax: -add-source <id> <source>";
 
-    "-add-tag", Arg.Tuple [Arg.Int (fun i -> (fst tag_to_add) := Some i);
+    "--add-tag", Arg.Tuple [Arg.Int (fun i -> (fst tag_to_add) := Some i);
                            Arg.String (fun s -> (snd tag_to_add) := Some s)],
     "Add a tag to an existing document. Syntax: -add-tag <id> <tag>";
 
-    "-all", Arg.Set print_all, "Display the contents of the database";
+    "-l", Arg.Set print_all, "Display the contents of the database";
   ]
     (fun elt -> query_elts := elt::!query_elts)
     "Usage: papiers [OPTIONS] keywords...
