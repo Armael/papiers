@@ -1,12 +1,14 @@
 open Batteries
 
+let (^/) = Filename.concat
+
 let iter_effect_tl (f: 'a -> unit) (effect: unit -> unit) (l: 'a list) =
   match l with
   | [] -> ()
   | [x] -> f x
   | x::xs -> f x; List.iter (fun x -> effect (); f x) xs
 
-let display_doc (doc: Db.document) =
+let display_doc (db_base_path: string) (doc: Db.document) =
   let open Db in
   Printf.printf "# %d : %s\n" doc.id doc.name;
   Printf.printf "\nAuthors : ";
@@ -15,7 +17,12 @@ let display_doc (doc: Db.document) =
   Printf.printf "\nSource  : ";
   iter_effect_tl (fun s ->
     print_string "file://";
-    print_string s
+    print_string (
+      if Filename.is_relative s then
+        db_base_path ^/ s
+      else
+        s
+    )
   ) (fun () -> print_string " ") doc.source;
 
   Printf.printf "\nTags    : ";
@@ -67,6 +74,7 @@ The keywords are used to search through the db";
 
   (* Load the database *)
   let db: Db.t = Db.load Config.db_file in
+  let db_base_path = Filename.dirname Config.db_file in
 
   (* Add a document to the database (if needed) *)
   begin match !doc_to_add with
@@ -74,7 +82,7 @@ The keywords are used to search through the db";
   | Some (title, authors, source, tags) ->
     let doc = Db.add db ~name:title ~source ~authors ~tags in
     print_string "Succesfully added:\n\n";
-    display_doc doc
+    display_doc db_base_path doc
   end;
 
   (* Add a source to a document (if needed) *)
@@ -100,7 +108,7 @@ The keywords are used to search through the db";
   if !print_all then
     (* Only print the contents of the db *)
     Db.iter (fun doc ->
-      display_doc doc;
+      display_doc db_base_path doc;
       print_newline ()
     ) db
   else begin
@@ -132,7 +140,7 @@ The keywords are used to search through the db";
       |> List.map snd
     in
 
-    iter_effect_tl display_doc print_newline ranked_docs
+    iter_effect_tl (display_doc db_base_path) print_newline ranked_docs
   end;
 
   Db.store Config.db_file db
