@@ -53,6 +53,7 @@ let _ =
   let source_to_add = (ref None, ref None) in
   let tag_to_add = (ref None, ref None) in
   let print_all = ref false in
+  let doc_to_del = ref None in
   let query_elts = ref [] in
 
   Arg.parse [
@@ -67,6 +68,8 @@ let _ =
     "Add a tag to an existing document. Syntax: -add-tag <id> <tag>";
 
     "-l", Arg.Set print_all, "Display the contents of the database";
+
+    "-r", Arg.Int (fun i -> doc_to_del := Some i), "Delete a document. Syntax: -r <id>";
   ]
     (fun elt -> query_elts := elt::!query_elts)
     "Usage: papiers [OPTIONS] keywords...
@@ -103,6 +106,13 @@ The keywords are used to search through the db";
     let doc = { doc with Db.tags = tag::doc.Db.tags } in
     Db.update db doc
   | _ -> ()
+  end;
+
+  (* Delete a document (if needed) *)
+  begin match !doc_to_del with
+  | Some id ->
+    Db.remove db (Db.get db id)
+  | None -> ()
   end;
 
   if !print_all then

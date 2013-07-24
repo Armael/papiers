@@ -18,6 +18,7 @@ val add : t ->
 
 val get : t -> int -> document
 val update : t -> document -> unit
+val remove : t -> document -> unit
 val iter : (document -> unit) -> t -> unit
 val fold : (document -> 'b -> 'b) -> t -> 'b -> 'b
 

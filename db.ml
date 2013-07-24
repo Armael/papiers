@@ -28,6 +28,9 @@ let get db id =
 let update db doc =
   IntH.replace db doc.id doc
 
+let remove db doc =
+  IntH.remove db doc.id
+
 let iter f db =
   IntH.iter (fun _ doc -> f doc) db
 
