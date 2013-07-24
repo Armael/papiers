@@ -1,7 +1,7 @@
 open Batteries
 
 let (++) (a, b) (u, v) = (a +. u, b +. v)
-  
+
 let min3 a b c =
   min a (min b c)
 
@@ -12,17 +12,17 @@ let levenshtein ~del ~insert ~subst ~eq s t =
   (* for all i and j, d.(i).(j) will hold the Levenshtein distance between
      the first i characters of s and the first j characters of t *)
   let d = Array.make_matrix (m+1) (n+1) 0 in
-  
+
   for i = 0 to m do
     d.(i).(0) <- i  (* the distance of any first string to an empty second string *)
   done;
   for j = 0 to n do
     d.(0).(j) <- j  (* the distance of any second string to an empty first string *)
   done;
-  
+
   for j = 1 to n do
     for i = 1 to m do
-      
+
       if eq s.[i-1] t.[j-1] then
         d.(i).(j) <- d.(i-1).(j-1)  (* no operation required *)
       else
@@ -32,7 +32,7 @@ let levenshtein ~del ~insert ~subst ~eq s t =
           (d.(i-1).(j-1) + subst) (* a substitution *)
     done;
   done;
-  
+
   d.(m).(n)
 
 

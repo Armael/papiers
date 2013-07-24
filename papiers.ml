@@ -34,7 +34,7 @@ let add_doc r source =
   let title = read_line () |> BatString.strip in
 
   print_string "Authors (comma separated): ";
-  let authors = 
+  let authors =
     read_line ()
     |> BatString.nsplit ~by:","
     |> List.map BatString.strip
