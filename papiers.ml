@@ -117,10 +117,9 @@ The keywords are used to search through the db";
 
   if !print_all then
     (* Only print the contents of the db *)
-    Db.iter (fun doc ->
-      display_doc db_base_path doc;
-      print_newline ()
-    ) db
+    Db.fold (fun doc acc -> doc::acc) db []
+    |> List.sort (fun a b -> compare a.Db.id b.Db.id)
+    |> iter_effect_tl (display_doc db_base_path) print_newline
   else begin
     (* Make a research through the db *)
     let query = List.map (fun elt ->
