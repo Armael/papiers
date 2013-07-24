@@ -65,8 +65,10 @@ let _ =
     "Usage: papiers [OPTIONS] keywords...
 The keywords are used to search through the db";
 
+  (* Load the database *)
   let db: Db.t = Db.load Config.db_file in
 
+  (* Add a document to the database (if needed) *)
   begin match !doc_to_add with
   | None -> ()
   | Some (title, authors, source, tags) ->
@@ -75,6 +77,7 @@ The keywords are used to search through the db";
     display_doc doc
   end;
 
+  (* Add a source to a document (if needed) *)
   let (id, path) = source_to_add in
   begin match (!id, !path) with
   | (Some id, Some path) ->
@@ -84,6 +87,7 @@ The keywords are used to search through the db";
   | _ -> ()
   end;
 
+  (* Add a tag to a document (if needed) *)
   let (id, tag) = tag_to_add in
   begin match (!id, !tag) with
   | (Some id, Some tag) ->
@@ -94,11 +98,13 @@ The keywords are used to search through the db";
   end;
 
   if !print_all then
+    (* Only print the contents of the db *)
     Db.iter (fun doc ->
       display_doc doc;
       print_newline ()
     ) db
   else begin
+    (* Make a research through the db *)
     let query = List.map (fun elt ->
       try
         match BatString.split elt ~by:":" with
