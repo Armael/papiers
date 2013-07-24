@@ -11,10 +11,10 @@ let iter_effect_tl (f: 'a -> unit) (effect: unit -> unit) (l: 'a list) =
 let display_doc (db_base_path: string) (doc: Db.document) =
   let open Db in
   Printf.printf "# %d : %s\n" doc.id doc.name;
-  Printf.printf "\nAuthors : ";
+  if doc.authors <> [] then Printf.printf "\nAuthors : ";
   iter_effect_tl print_string (fun () -> print_string ", ") doc.authors;
 
-  Printf.printf "\nSource  : ";
+  if doc.source <> [] then Printf.printf "\nSource  : ";
   iter_effect_tl (fun s ->
     print_string "file://";
     print_string (
@@ -25,7 +25,7 @@ let display_doc (db_base_path: string) (doc: Db.document) =
     )
   ) (fun () -> print_string " ") doc.source;
 
-  Printf.printf "\nTags    : ";
+  if doc.tags <> [] then Printf.printf "\nTags    : ";
   iter_effect_tl print_string (fun () -> print_string ", ") doc.tags;
   print_newline ()
 
