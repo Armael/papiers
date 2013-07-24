@@ -62,7 +62,8 @@ let _ =
     "-all", Arg.Set print_all, "Display the contents of the database";
   ]
     (fun elt -> query_elts := elt::!query_elts)
-    "papiers";
+    "Usage: papiers [OPTIONS] keywords...
+The keywords are used to search through the db";
 
   let db: Db.t = Db.load Config.db_file in
 
