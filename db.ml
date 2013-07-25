@@ -39,7 +39,7 @@ let iter f db =
 let fold f db acc =
   IntH.fold (fun _ doc acc -> f doc acc) db acc
 
-(* JSON backend: the database is stored as a JSON object *) 
+(* JSON backend: the database is stored as a JSON object *)
 
 module Json = Yojson.Basic
 
@@ -79,7 +79,7 @@ let document_of_json (json: Json.json): document =
   let authors = json |> member "authors" |> to_list_option |? [] |> json2strlst in
   let source = json |> member "source" |> to_list_option |? [] |> json2strlst in
   let tags = json |> member "tags" |> to_list_option |? [] |> json2strlst in
-  
+
   { id; name; authors; source; tags }
 
 let t_of_json (json: Json.json): t =
