@@ -68,11 +68,7 @@ let document_of_json (json: Json.json): document =
   let open Json.Util in
   let to_list_option = to_option to_list in
 
-  let json2strlst l = List.fold_left (fun acc s ->
-    match to_string_option s with
-    | None -> acc
-    | Some s -> s::acc
-  ) [] l |> List.rev in
+  let json2strlst = BatList.filter_map to_string_option in
 
   let id = json |> member "id" |> to_int in
   let name = json |> member "name" |> to_string_option |? "" in
@@ -90,9 +86,7 @@ let t_of_json (json: Json.json): t =
        |> IntH.of_enum
 
 let load (file: string) =
-  try
-    let db = Json.from_file file |> t_of_json in
-    db
+  try Json.from_file file |> t_of_json
   with Sys_error _ -> create ()
 
 let store (file: string) (db: t) =
