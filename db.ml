@@ -8,7 +8,7 @@ type document = {
   tags: string list;
 }
 
-module IntH = BatHashtbl.Make (struct
+module IntH = Hashtbl.Make (struct
   type t = int
   let equal = (=)
   let hash = Hashtbl.hash
@@ -68,7 +68,7 @@ let document_of_json (json: Json.json): document =
   let open Json.Util in
   let to_list_option = to_option to_list in
 
-  let json2strlst = BatList.filter_map to_string_option in
+  let json2strlst = List.filter_map to_string_option in
 
   let id = json |> member "id" |> to_int in
   let name = json |> member "name" |> to_string_option |? "" in
@@ -82,7 +82,7 @@ let t_of_json (json: Json.json): t =
   let open Json.Util in
   json |> to_list
        |> List.map (fun j -> let doc = document_of_json j in (doc.id, doc))
-       |> BatList.enum
+       |> List.enum
        |> IntH.of_enum
 
 let load (file: string) =

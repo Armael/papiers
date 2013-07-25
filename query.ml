@@ -55,13 +55,13 @@ let eval_query_elt (elt: query_elt) (doc: Db.document): float * float =
   in
 
   let search u (* in *) v =
-    let u = BatString.lowercase u and v = BatString.lowercase v in
+    let u = String.lowercase u and v = String.lowercase v in
     if u = v then (1., 0.)
-    else if BatString.Exceptionless.find v u <> None then
+    else if String.Exceptionless.find v u <> None then
       (0., 1.)
     else begin
       try
-        BatString.nsplit v ~by:" "
+        String.nsplit v ~by:" "
         |> List.map (ldist u)
         |> List.fold_left (fun acc d -> acc ++ (0., d)) (0., 0.)
       with Not_found ->

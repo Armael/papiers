@@ -6,7 +6,7 @@ type document = {
   tags: string list;
 }
 
-module IntH = BatHashtbl.Make (struct
+module IntH = Hashtbl.Make (struct
   type t = int
   let equal = (=)
   let hash = Hashtbl.hash

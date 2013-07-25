@@ -64,7 +64,7 @@ let display_doc (doc: Db.document) =
   iter_effect_tl print_string (fun () -> print_string ", ") doc.authors;
 
   if doc.source <> [] then Printf.printf "\nSource  :";
-  BatList.iteri (fun src_id s ->
+  List.iteri (fun src_id s ->
     Printf.printf " #%d: file://" src_id;
     print_string (PathGen.of_string s |> full_path_in_db |> PathGen.to_string)
   ) doc.source;
@@ -77,13 +77,13 @@ let display_doc (doc: Db.document) =
 
 let query_doc_infos r source =
   print_string "Title: ";
-  let title = read_line () |> BatString.strip in
+  let title = read_line () |> String.strip in
 
   print_string "Authors (comma separated): ";
   let authors =
     read_line ()
-    |> BatString.nsplit ~by:","
-    |> List.map BatString.strip
+    |> String.nsplit ~by:","
+    |> List.map String.strip
   in
 
   let source = relocate source in
@@ -91,8 +91,8 @@ let query_doc_infos r source =
   print_string "Tags (comma separated): ";
   let tags =
     read_line ()
-    |> BatString.nsplit ~by:","
-    |> List.map BatString.strip
+    |> String.nsplit ~by:","
+    |> List.map String.strip
   in
   Glob.set r (title, authors, [source], tags)
 
@@ -104,7 +104,7 @@ let add_doc (db: Db.t) (name, authors, source, tags) =
 let add_source (db: Db.t) (id, path) =
   let path = relocate path in
   let doc = Db.get db id in
-  Db.update db { doc with Db.source = BatList.append doc.Db.source [path] }
+  Db.update db { doc with Db.source = List.append doc.Db.source [path] }
 
 let add_tag (db: Db.t) (id, tag) =
   let doc = Db.get db id in
@@ -114,7 +114,7 @@ let del_doc (db: Db.t) id =
   Db.remove db (Db.get db id)
 
 let print_db (db: Db.t) () =
-  Db.fold BatList.cons db []
+  Db.fold List.cons db []
   |> List.sort (fun a b -> compare a.Db.id b.Db.id)
   |> iter_effect_tl display_doc print_newline
 
@@ -136,7 +136,7 @@ let open_src (db: Db.t) (input: string) =
               |> PathGen.of_string
               |> full_path_in_db
               |> PathGen.to_string in
-    BatUnix.execv
+    Unix.execv
       "/bin/sh"
       [| "/bin/sh"; Config.external_reader; src |]
   with Invalid_argument _ ->
@@ -188,7 +188,7 @@ The keywords are used to search through the db";
 
   (* Run the options' actions *)
   let action_done = ref false in
-  let may f = BatOption.may ((fun () -> action_done := true) % f) in
+  let may f = Option.may ((fun () -> action_done := true) % f) in
 
   doc_to_add    |> Glob.get        |> may @@ add_doc db;
   source_to_add |> glob_get_couple |> may @@ add_source db;
@@ -203,7 +203,7 @@ The keywords are used to search through the db";
       (* Make a research through the db *)
       let query = List.map (fun elt ->
         try
-          match BatString.split elt ~by:":" with
+          match String.split elt ~by:":" with
           | ("id", s) ->
             begin try Query.Id (int_of_string s) with
               Failure "int_of_string" ->
