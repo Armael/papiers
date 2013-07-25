@@ -19,32 +19,6 @@ let iter_effect_tl (f: 'a -> unit) (effect: unit -> unit) (l: 'a list) =
   | [x] -> f x
   | x::xs -> f x; List.iter (fun x -> effect (); f x) xs
 
-(* Pretty printing ************************************************************)
-
-let display_doc (doc: Db.document) =
-  let open Db in
-  Printf.printf "# %d : %s\n" doc.id doc.name;
-  if doc.authors <> [] then Printf.printf "\nAuthors : ";
-  iter_effect_tl print_string (fun () -> print_string ", ") doc.authors;
-
-  if doc.source <> [] then Printf.printf "\nSource  :";
-  BatList.iteri (fun src_id s ->
-    Printf.printf " #%d: file://" src_id;
-    let s: PathGen.t = PathGen.of_string s in
-    let path =
-      if PathGen.is_relative s then
-        PathGen.concat db_base_path s
-      else
-        s
-    in
-    print_string (PathGen.to_string path)
-
-  ) doc.source;
-
-  if doc.tags <> [] then Printf.printf "\nTags    : ";
-  iter_effect_tl print_string (fun () -> print_string ", ") doc.tags;
-  print_newline ()
-
 (* Path manipulation **********************************************************)
 
 (* Output [path] relatively to [db_base_path] *)
@@ -65,6 +39,14 @@ let full_path_in_cwd (path: PathGen.t) =
   else
     path
 
+(* Take [path], relative to the db location, and output the absolute
+   path *)
+let full_path_in_db (path: PathGen.t) =
+  if PathGen.is_relative path then
+    PathGen.concat db_base_path path
+  else
+    path
+
 (* Relocate [path] to be relative to the database location *)
 let relocate (path: string) =
   path
@@ -72,6 +54,24 @@ let relocate (path: string) =
   |> full_path_in_cwd
   |> relative_path
   |> PathGen.to_string
+
+(* Pretty printing ************************************************************)
+
+let display_doc (doc: Db.document) =
+  let open Db in
+  Printf.printf "# %d : %s\n" doc.id doc.name;
+  if doc.authors <> [] then Printf.printf "\nAuthors : ";
+  iter_effect_tl print_string (fun () -> print_string ", ") doc.authors;
+
+  if doc.source <> [] then Printf.printf "\nSource  :";
+  BatList.iteri (fun src_id s ->
+    Printf.printf " #%d: file://" src_id;
+    print_string (PathGen.of_string s |> full_path_in_db |> PathGen.to_string)
+  ) doc.source;
+
+  if doc.tags <> [] then Printf.printf "\nTags    : ";
+  iter_effect_tl print_string (fun () -> print_string ", ") doc.tags;
+  print_newline ()
 
 (* Papiers actions (add/remove/modify documents,…) ****************************)
 
@@ -118,6 +118,30 @@ let print_db (db: Db.t) () =
   |> List.sort (fun a b -> compare a.Db.id b.Db.id)
   |> iter_effect_tl display_doc print_newline
 
+let open_src (db: Db.t) (input: string) =
+  (* We have to parse the input. Format: <id>[:<src id>] *)
+  let read_int (s: string): int = Scanf.sscanf s "%d" identity in
+
+  let (id, src_id) =
+    try begin
+      try String.split input ~by:":" |> Tuple2.mapn read_int
+      with Not_found | End_of_file -> (read_int input, 0)
+    end with End_of_file ->
+      Printf.printf "Error: %s has incorrect format\n" input;
+      exit 1
+  in
+  let doc = Db.get db id in
+  try
+    let src = List.nth doc.Db.source src_id
+              |> PathGen.of_string
+              |> full_path_in_db
+              |> PathGen.to_string in
+    BatUnix.execv
+      "/bin/sh"
+      [| "/bin/sh"; Config.external_reader; src |]
+  with Invalid_argument _ ->
+    Printf.printf "Error: wrong source id (%d)\n" src_id
+
 (* Main function **************************************************************)
 
 let _ =
@@ -127,6 +151,7 @@ let _ =
   let tag_to_add = (Glob.empty "tag_to_add_id",
                     Glob.empty "tag_to_add_tag") in
   let doc_to_del = Glob.empty "doc_to_del" in
+  let doc_to_open = Glob.empty "doc_to_open" in
   let print_all = Glob.empty "print_all" in
 
   let query_elts = ref [] in
@@ -151,6 +176,8 @@ let _ =
     "-l", set_unit print_all, "Display the contents of the database";
 
     "-r", set_int doc_to_del, "Delete a document. Syntax: -r <id>";
+
+    "-o", set_string doc_to_open, "Open a source. Syntax: -o <id>[:<src id>]. <id>: id of the document, <src id> (optional) id of the source";
   ]
     (fun elt -> query_elts := elt::!query_elts)
     "Usage: papiers [OPTIONS] keywords...
@@ -168,6 +195,7 @@ The keywords are used to search through the db";
   tag_to_add    |> glob_get_couple |> may @@ add_tag db;
   doc_to_del    |> Glob.get        |> may @@ del_doc db;
   print_all     |> Glob.get        |> may @@ print_db db;
+  doc_to_open   |> Glob.get        |> may @@ open_src db;
 
   (* If no action have been executed, make a research through the db *)
   if not !action_done then
