@@ -144,7 +144,8 @@ let open_src (db: Db.t) (input: string) =
               |> PathGen.of_string
               |> full_path_in_db
               |> PathGen.to_string in
-    let cmd = Config.external_reader ^ " " ^ src in
+    let cmd = Config.external_reader ^ " " ^ "\'" ^ src ^ "\'" in
+    Printf.printf "Running \'%s\'." cmd;
     spawn cmd
   with Invalid_argument _ ->
     Printf.printf "Error: wrong source id (%d)\n" src_id
