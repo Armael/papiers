@@ -153,7 +153,7 @@ The keywords are used to search through the db";
 
   if !print_all then
     (* Only print the contents of the db *)
-    Db.fold (fun doc acc -> doc::acc) db []
+    Db.fold BatList.cons db []
     |> List.sort (fun a b -> compare a.Db.id b.Db.id)
     |> iter_effect_tl display_doc print_newline
   else begin
