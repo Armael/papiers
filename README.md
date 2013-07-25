@@ -4,7 +4,7 @@
 
 ## Build instructions
 
-- Install batteries (`opam install batteries` if you have opam)
+- Install batteries and yojson (`opam install batteries yojson` if you have opam)
 - Edit config.ml if you want to change the db location (by default it is `~/.papiers.db`)
 - Then:
 ```
