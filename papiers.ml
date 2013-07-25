@@ -27,9 +27,9 @@ let display_doc (doc: Db.document) =
   if doc.authors <> [] then Printf.printf "\nAuthors : ";
   iter_effect_tl print_string (fun () -> print_string ", ") doc.authors;
 
-  if doc.source <> [] then Printf.printf "\nSource  : ";
-  iter_effect_tl (fun s ->
-    print_string "file://";
+  if doc.source <> [] then Printf.printf "\nSource  :";
+  BatList.iteri (fun src_id s ->
+    Printf.printf " #%d: file://" src_id;
     let s: PathGen.t = PathGen.of_string s in
     let path =
       if PathGen.is_relative s then
@@ -39,7 +39,7 @@ let display_doc (doc: Db.document) =
     in
     print_string (PathGen.to_string path)
 
-  ) (fun () -> print_string " ") doc.source;
+  ) doc.source;
 
   if doc.tags <> [] then Printf.printf "\nTags    : ";
   iter_effect_tl print_string (fun () -> print_string ", ") doc.tags;
@@ -104,7 +104,7 @@ let add_doc (db: Db.t) (name, authors, source, tags) =
 let add_source (db: Db.t) (id, path) =
   let path = relocate path in
   let doc = Db.get db id in
-  Db.update db { doc with Db.source = path::doc.Db.source }
+  Db.update db { doc with Db.source = BatList.append doc.Db.source [path] }
 
 let add_tag (db: Db.t) (id, tag) =
   let doc = Db.get db id in
