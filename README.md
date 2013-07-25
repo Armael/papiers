@@ -5,7 +5,7 @@
 ## Build instructions
 
 - Install batteries and yojson (`opam install batteries yojson` if you have opam)
-- Edit config.ml if you want to change the db location (by default it is `~/.papiers.db`)
+- Edit config.ml if you want to change the db location (by default it is `~/.papiers.db`), or the default reader for the sources (default: `xdg-open`)
 - Then:
 ```
 make
@@ -15,6 +15,7 @@ make
 
 - Add documents to the database: `papiers -a ~/Papers/interesting_paper.pdf`
 - Make queries to the database: `papiers keyword1 keyword2`
+- Type `papiers --help` to see the other possibilities
 
 A query is more or less simply a list of keywords, that are searched through the
 documents informations, like the title, authors, sources and tags.
