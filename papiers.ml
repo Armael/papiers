@@ -19,6 +19,14 @@ let iter_effect_tl (f: 'a -> unit) (effect: unit -> unit) (l: 'a list) =
   | [x] -> f x
   | x::xs -> f x; List.iter (fun x -> effect (); f x) xs
 
+let spawn (cmd: string) =
+  if Unix.fork () = 0 then (
+    Unix.setsid () |> ignore;
+    Unix.execv
+      "/bin/sh"
+      [| "/bin/sh"; "-c"; cmd |]
+  )
+
 (* Path manipulation **********************************************************)
 
 (* Output [path] relatively to [db_base_path] *)
@@ -136,9 +144,8 @@ let open_src (db: Db.t) (input: string) =
               |> PathGen.of_string
               |> full_path_in_db
               |> PathGen.to_string in
-    Unix.execv
-      "/bin/sh"
-      [| "/bin/sh"; Config.external_reader; src |]
+    let cmd = Config.external_reader ^ " " ^ src in
+    spawn cmd
   with Invalid_argument _ ->
     Printf.printf "Error: wrong source id (%d)\n" src_id
 
