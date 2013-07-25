@@ -1,6 +1,9 @@
 open Batteries
 
-let (^/) = Filename.concat
+module PathGen = BatPathGen.OfString
+
+(* Path to the directory that contains the database *)
+let db_base_path = PathGen.of_string Config.db_file |> PathGen.parent
 
 let iter_effect_tl (f: 'a -> unit) (effect: unit -> unit) (l: 'a list) =
   match l with
@@ -8,7 +11,7 @@ let iter_effect_tl (f: 'a -> unit) (effect: unit -> unit) (l: 'a list) =
   | [x] -> f x
   | x::xs -> f x; List.iter (fun x -> effect (); f x) xs
 
-let display_doc (db_base_path: string) (doc: Db.document) =
+let display_doc (doc: Db.document) =
   let open Db in
   Printf.printf "# %d : %s\n" doc.id doc.name;
   if doc.authors <> [] then Printf.printf "\nAuthors : ";
@@ -17,17 +20,46 @@ let display_doc (db_base_path: string) (doc: Db.document) =
   if doc.source <> [] then Printf.printf "\nSource  : ";
   iter_effect_tl (fun s ->
     print_string "file://";
-    print_string (
-      if Filename.is_relative s then
-        db_base_path ^/ s
+    let s: PathGen.t = PathGen.of_string s in
+    let path =
+      if PathGen.is_relative s then
+        PathGen.concat db_base_path s
       else
         s
-    )
+    in
+    print_string (PathGen.to_string path)
+
   ) (fun () -> print_string " ") doc.source;
 
   if doc.tags <> [] then Printf.printf "\nTags    : ";
   iter_effect_tl print_string (fun () -> print_string ", ") doc.tags;
   print_newline ()
+
+(* Output [path] relatively to [db_base_path] *)
+let relative_path (path: PathGen.t) =
+  try
+    PathGen.relative_to_parent db_base_path path
+  with PathGen.Not_parent -> path
+
+(* Take [path], relative to the current working directory, and output
+   the absolute path *)
+let full_path_in_cwd (path: PathGen.t) =
+  if PathGen.is_relative path then
+    PathGen.(
+      concat
+        (of_string (Unix.getcwd ()))
+        path
+    )
+  else
+    path
+
+(* Relocate [path] to be relative to the database location *)
+let relocate (path: string) =
+  path
+  |> PathGen.of_string
+  |> full_path_in_cwd
+  |> relative_path
+  |> PathGen.to_string
 
 let add_doc r source =
   print_string "Title: ";
@@ -39,6 +71,8 @@ let add_doc r source =
     |> BatString.nsplit ~by:","
     |> List.map BatString.strip
   in
+
+  let source = relocate source in
 
   print_string "Tags (comma separated): ";
   let tags =
@@ -77,7 +111,7 @@ The keywords are used to search through the db";
 
   (* Load the database *)
   let db: Db.t = Db.load Config.db_file in
-  let db_base_path = Filename.dirname Config.db_file in
+
 
   (* Add a document to the database (if needed) *)
   begin match !doc_to_add with
@@ -85,13 +119,15 @@ The keywords are used to search through the db";
   | Some (title, authors, source, tags) ->
     let doc = Db.add db ~name:title ~source ~authors ~tags in
     print_string "Succesfully added:\n\n";
-    display_doc db_base_path doc
+    display_doc doc
   end;
 
   (* Add a source to a document (if needed) *)
   let (id, path) = source_to_add in
   begin match (!id, !path) with
   | (Some id, Some path) ->
+    let path = relocate path in
+
     let doc = Db.get db id in
     let doc = { doc with Db.source = path::doc.Db.source } in
     Db.update db doc
@@ -119,7 +155,7 @@ The keywords are used to search through the db";
     (* Only print the contents of the db *)
     Db.fold (fun doc acc -> doc::acc) db []
     |> List.sort (fun a b -> compare a.Db.id b.Db.id)
-    |> iter_effect_tl (display_doc db_base_path) print_newline
+    |> iter_effect_tl display_doc print_newline
   else begin
     (* Make a research through the db *)
     let query = List.map (fun elt ->
@@ -149,7 +185,7 @@ The keywords are used to search through the db";
       |> List.map snd
     in
 
-    iter_effect_tl (display_doc db_base_path) print_newline ranked_docs
+    iter_effect_tl display_doc print_newline ranked_docs
   end;
 
   Db.store Config.db_file db
