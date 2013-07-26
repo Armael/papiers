@@ -118,6 +118,10 @@ let add_tag (db: Db.t) (id, tag) =
   let doc = Db.get db id in
   Db.update db { doc with Db.tags = tag::doc.Db.tags }
 
+let del_tag (db: Db.t) (id, tag) =
+  let doc = Db.get db id in
+  Db.update db { doc with Db.tags = List.filter ((<>) tag) doc.Db.tags }
+
 let del_doc (db: Db.t) id =
   Db.remove db (Db.get db id)
 
@@ -158,6 +162,8 @@ let _ =
                        Glob.empty "source_to_add_src") in
   let tag_to_add = (Glob.empty "tag_to_add_id",
                     Glob.empty "tag_to_add_tag") in
+  let tag_to_del = (Glob.empty "tag_to_del_id",
+                    Glob.empty "tag_to_del_tag") in
   let doc_to_del = Glob.empty "doc_to_del" in
   let doc_to_open = Glob.empty "doc_to_open" in
   let print_all = Glob.empty "print_all" in
@@ -183,6 +189,10 @@ let _ =
                             set_string (snd tag_to_add)],
     "Add a tag to an existing document. Syntax: -add-tag <id> <tag>";
 
+    "--del-tag", Arg.Tuple [set_int (fst tag_to_del);
+                            set_string (snd tag_to_del)],
+    "Delete a tag from an existing document. Syntax: --del-tag <id> <tag>";
+
     "-l", set_unit print_all, "Display the contents of the database";
 
     "-r", set_int doc_to_del, "Delete a document. Syntax: -r <id>";
@@ -205,6 +215,7 @@ The keywords are used to search through the db";
   doc_to_add    |> Glob.get        |> may @@ add_doc db;
   source_to_add |> glob_get_couple |> may @@ add_source db;
   tag_to_add    |> glob_get_couple |> may @@ add_tag db;
+  tag_to_del    |> glob_get_couple |> may @@ del_tag db;
   doc_to_del    |> Glob.get        |> may @@ del_doc db;
   print_all     |> Glob.get        |> may @@ print_db db;
   doc_to_open   |> Glob.get        |> may @@ open_src db;
