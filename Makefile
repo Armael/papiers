@@ -12,6 +12,6 @@ papiers:
 install:
 	cp papiers.native $(TARGET)/papiers
 
-mproper:
+mrproper:
 	$(CC) -clean
 
