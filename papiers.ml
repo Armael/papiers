@@ -73,19 +73,44 @@ let relocate (path: string) =
 
 (* Pretty printing ************************************************************)
 
+module A = ANSITerminal
+module C = Config.Colors
+
+let colored = Config.colored_output && Unix.isatty Unix.stdout
+
+let print_color style =
+  if colored then
+    A.print_string style
+  else
+    print_string
+
 let display_doc (doc: Db.document) =
   let open Db in
-  Printf.printf "# %d : %s\n" doc.id doc.name;
-  if doc.authors <> [] then Printf.printf "\nAuthors : ";
+
+  if colored then
+    A.printf C.title "# %d : %s\n" doc.id doc.name
+  else
+    Printf.printf "# %d : %s\n" doc.id doc.name;
+
+  if doc.authors <> [] then (
+    print_newline ();
+    print_color C.authors "Authors : ";
+  );
   iter_effect_tl print_string (fun () -> print_string ", ") doc.authors;
 
-  if doc.source <> [] then Printf.printf "\nSource  :";
+  if doc.source <> [] then (
+    print_newline ();
+    print_color C.sources "Source  :";
+  );
   List.iteri (fun src_id s ->
     Printf.printf " #%d: file://" src_id;
     print_string (PathGen.of_string s |> full_path_in_db |> PathGen.to_string)
   ) doc.source;
 
-  if doc.tags <> [] then Printf.printf "\nTags    : ";
+  if doc.tags <> [] then (
+    print_newline ();
+    print_color C.tags "Tags    : ";
+  );
   iter_effect_tl print_string (fun () -> print_string ", ") doc.tags;
   print_newline ()
 

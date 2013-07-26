@@ -4,7 +4,7 @@
 
 ## Build instructions
 
-- Install batteries and yojson (`opam install batteries yojson` if you have opam)
+- Install batteries, yojson and ANSITerminal (`opam install batteries yojson ANSITerminal` if you have opam)
 - Edit config.ml if you want to change the db location (by default it is `~/.papiers.db`), or the default reader for the sources (default: `xdg-open`)
 - Then:
 ```

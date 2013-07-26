@@ -1,1 +1,1 @@
-true: package(batteries,yojson)
+true: package(batteries), package(yojson), package(ANSITerminal)
