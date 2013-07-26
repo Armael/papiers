@@ -162,6 +162,8 @@ let _ =
   let doc_to_open = Glob.empty "doc_to_open" in
   let print_all = Glob.empty "print_all" in
 
+  let limit_output = Glob.empty "limit_output" in
+
   let query_elts = ref [] in
 
   let set_int (r: int Glob.t) = Arg.Int (Glob.set r)
@@ -186,6 +188,8 @@ let _ =
     "-r", set_int doc_to_del, "Delete a document. Syntax: -r <id>";
 
     "-o", set_string doc_to_open, "Open a source. Syntax: -o <id>[:<src id>]. <id>: id of the document, <src id> (optional) id of the source";
+
+    "-n", set_int limit_output, "Print only the first K answers of a query. Syntax: -n <K>";
   ]
     (fun elt -> query_elts := elt::!query_elts)
     "Usage: papiers [OPTIONS] keywords...
@@ -236,7 +240,9 @@ The keywords are used to search through the db";
         |> List.map snd
       in
 
-      iter_effect_tl display_doc print_newline ranked_docs
+      (Glob.get limit_output |> Option.map (flip List.take ranked_docs))
+      |? ranked_docs
+      |> iter_effect_tl display_doc print_newline
     end;
 
   Db.store Config.db_file db
