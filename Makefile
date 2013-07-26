@@ -9,7 +9,7 @@ all: papiers
 papiers:
 	$(CC) $(CFLAGS) $@.native
 
-install: papiers
+install:
 	cp papiers.native $(TARGET)/papiers
 
 mproper:
