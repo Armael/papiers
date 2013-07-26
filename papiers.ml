@@ -183,11 +183,11 @@ let _ =
 
     "--add-source", Arg.Tuple [set_int (fst source_to_add);
                                set_string (snd source_to_add)],
-    "Add a source to an existing document. Syntax: -add-source <id> <source>";
+    "Add a source to an existing document. Syntax: --add-source <id> <source>";
 
     "--add-tag", Arg.Tuple [set_int (fst tag_to_add);
                             set_string (snd tag_to_add)],
-    "Add a tag to an existing document. Syntax: -add-tag <id> <tag>";
+    "Add a tag to an existing document. Syntax: --add-tag <id> <tag>";
 
     "--del-tag", Arg.Tuple [set_int (fst tag_to_del);
                             set_string (snd tag_to_del)],
