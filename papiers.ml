@@ -27,6 +27,14 @@ let spawn (cmd: string) =
       [| "/bin/sh"; "-c"; cmd |]
   )
 
+let filter_i (n: int) (l: 'a list) =
+  List.fold_left (fun (id, acc) x ->
+    (id + 1,
+     if n <> id then x::acc else acc)
+  ) (0, []) l
+  |> snd |> List.rev
+
+
 (* Path manipulation **********************************************************)
 
 (* Output [path] relatively to [db_base_path] *)
@@ -114,6 +122,10 @@ let add_source (db: Db.t) (id, path) =
   let doc = Db.get db id in
   Db.update db { doc with Db.source = List.append doc.Db.source [path] }
 
+let del_source (db: Db.t) (id, src_id) =
+  let doc = Db.get db id in
+  Db.update db { doc with Db.source = filter_i src_id doc.Db.source }
+
 let add_tag (db: Db.t) (id, tag) =
   let doc = Db.get db id in
   Db.update db { doc with Db.tags = tag::doc.Db.tags }
@@ -160,6 +172,8 @@ let _ =
   let doc_to_add = Glob.empty "doc_to_add" in
   let source_to_add = (Glob.empty "source_to_add_id",
                        Glob.empty "source_to_add_src") in
+  let source_to_del = (Glob.empty "source_to_del_id",
+                       Glob.empty "source_to_del_src") in
   let tag_to_add = (Glob.empty "tag_to_add_id",
                     Glob.empty "tag_to_add_tag") in
   let tag_to_del = (Glob.empty "tag_to_del_id",
@@ -184,6 +198,10 @@ let _ =
     "--add-source", Arg.Tuple [set_int (fst source_to_add);
                                set_string (snd source_to_add)],
     "Add a source to an existing document. Syntax: --add-source <id> <source>";
+
+    "--del-source", Arg.Tuple [set_int (fst source_to_del);
+                               set_int (snd source_to_del)],
+    "Delete a source from an existing document. Syntax: --del-source <id> <src id>";
 
     "--add-tag", Arg.Tuple [set_int (fst tag_to_add);
                             set_string (snd tag_to_add)],
@@ -214,6 +232,7 @@ The keywords are used to search through the db";
 
   doc_to_add    |> Glob.get        |> may @@ add_doc db;
   source_to_add |> glob_get_couple |> may @@ add_source db;
+  source_to_del |> glob_get_couple |> may @@ del_source db;
   tag_to_add    |> glob_get_couple |> may @@ add_tag db;
   tag_to_del    |> glob_get_couple |> may @@ del_tag db;
   doc_to_del    |> Glob.get        |> may @@ del_doc db;
