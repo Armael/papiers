@@ -19,6 +19,16 @@ let iter_effect_tl (f: 'a -> unit) (effect: unit -> unit) (l: 'a list) =
   | [x] -> f x
   | x::xs -> f x; List.iter (fun x -> effect (); f x) xs
 
+let iteri_effects (f: int -> 'a -> unit)
+    ~(before: unit -> unit)
+    ~(between: unit -> unit)
+    (l: 'a list) =
+  match l with
+  | [] -> ()
+  | [x] -> before (); f 0 x
+  | x::xs -> before (); f 0 x; List.iteri (fun i x -> between (); f (i+1) x) xs
+
+
 let spawn (cmd: string) =
   if Unix.fork () = 0 then (
     Unix.setsid () |> ignore;
@@ -98,14 +108,13 @@ let display_doc (doc: Db.document) =
   );
   iter_effect_tl print_string (fun () -> print_string ", ") doc.authors;
 
-  if doc.source <> [] then (
-    print_newline ();
-    print_color C.sources "Source  :";
-  );
-  List.iteri (fun src_id s ->
-    Printf.printf " #%d: file://" src_id;
-    print_string (PathGen.of_string s |> full_path_in_db |> PathGen.to_string)
-  ) doc.source;
+  iteri_effects
+    ~before:(fun () -> print_newline (); print_color C.sources "Source  :")
+    ~between:(fun () -> print_newline (); print_string "         ")
+    (fun src_id s ->
+      Printf.printf " #%d: file://" src_id;
+      print_string (PathGen.of_string s |> full_path_in_db |> PathGen.to_string);
+    ) doc.source;
 
   if doc.tags <> [] then (
     print_newline ();
