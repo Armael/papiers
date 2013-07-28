@@ -8,7 +8,7 @@
 - Edit the `src/config.ml` if you want to change the db location (by default it is `~/.papiers.db`), or the default reader for the sources (default: `xdg-open`)
 - Then:
 ```
-./configure
+./configure  
 make && sudo make install
 ```
 
