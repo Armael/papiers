@@ -1,17 +1,38 @@
-CC := ocamlbuild
-CFLAGS := -use-ocamlfind
-TARGET := /usr/local/bin
+# OASIS_START
+# DO NOT EDIT (digest: bc1e05bfc8b39b664f29dae8dbd3ebbb)
 
-.PHONY: all mproper
+SETUP = ocaml setup.ml
 
-all: papiers
+build: setup.data
+	$(SETUP) -build $(BUILDFLAGS)
 
-papiers:
-	$(CC) $(CFLAGS) $@.native
+doc: setup.data build
+	$(SETUP) -doc $(DOCFLAGS)
 
-install:
-	cp papiers.native $(TARGET)/papiers
+test: setup.data build
+	$(SETUP) -test $(TESTFLAGS)
 
-mrproper:
-	$(CC) -clean
+all: 
+	$(SETUP) -all $(ALLFLAGS)
 
+install: setup.data
+	$(SETUP) -install $(INSTALLFLAGS)
+
+uninstall: setup.data
+	$(SETUP) -uninstall $(UNINSTALLFLAGS)
+
+reinstall: setup.data
+	$(SETUP) -reinstall $(REINSTALLFLAGS)
+
+clean: 
+	$(SETUP) -clean $(CLEANFLAGS)
+
+distclean: 
+	$(SETUP) -distclean $(DISTCLEANFLAGS)
+
+setup.data:
+	$(SETUP) -configure $(CONFIGUREFLAGS)
+
+.PHONY: build doc test all install uninstall reinstall clean distclean configure
+
+# OASIS_STOP

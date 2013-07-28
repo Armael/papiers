@@ -1,1 +1,23 @@
-true: package(batteries), package(yojson), package(ANSITerminal)
+# OASIS_START
+# DO NOT EDIT (digest: d70f295a154300f8dd9bacb676aac772)
+# Ignore VCS directories, you can use the same kind of rule outside 
+# OASIS_START/STOP if you want to exclude directories that contains 
+# useless stuff for the build process
+<**/.svn>: -traverse
+<**/.svn>: not_hygienic
+".bzr": -traverse
+".bzr": not_hygienic
+".hg": -traverse
+".hg": not_hygienic
+".git": -traverse
+".git": not_hygienic
+"_darcs": -traverse
+"_darcs": not_hygienic
+# Executable papiers
+<src/papiers.{native,byte}>: pkg_batteries
+<src/papiers.{native,byte}>: pkg_yojson
+<src/papiers.{native,byte}>: pkg_ANSITerminal
+<src/*.ml{,i}>: pkg_batteries
+<src/*.ml{,i}>: pkg_yojson
+<src/*.ml{,i}>: pkg_ANSITerminal
+# OASIS_STOP
