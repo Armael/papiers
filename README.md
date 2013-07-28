@@ -9,6 +9,7 @@
 - Then:
 ```
 ./configure
+
 make && sudo make install
 ```
 
