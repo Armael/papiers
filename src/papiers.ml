@@ -179,11 +179,11 @@ let show_cmd =
     let doc = "Ids of the documents to show" in
     Arg.(value & pos_all string [] & info [] ~docv:"DOC_IDs" ~doc)
   in
-  let doc = "Show documents informations" in
+  let doc = "Show informations about some or all documents in the database" in
   let man = [
     `S "DESCRIPTION";
-    `P "Show informations of database documents";
-    `P "Display informations of documents of ids $(b,DOC_IDs). If $(b,DOC_IDs) is empty, display informations of $(i,all) documents in the database";
+    `P "Display informations about documents of ids $(b,DOC_IDs)."; `Noblank;
+    `P "If $(b,DOC_IDs) is empty, display informations of $(i,all) documents in the database";
   ] in
   Term.(pure show $ ids),
   Term.info "show" ~doc ~man
