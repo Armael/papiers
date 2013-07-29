@@ -1,61 +1,19 @@
 open Batteries
 open Cmdliner
 
-(* Implementation *)
+(* Implementation of the commands *********************************************)
 
-(* Commands *)
+open Commands
 
-type action =
-| Add
-| Del
+(* Command line interface *****************************************************)
 
-let str_of_action = function
-  | Add -> "Add"
-  | Del -> "Del"
-
-let initialize dir = print_endline "=> initialize"
-let search max_res query = print_endline "=> search"
-let add obj args = print_endline "=> add" (* useless *)
-
-let document action arg = match action with
-  | Add ->
-    let all_exist = List.fold_left
-      (fun acc f -> acc && (Sys.file_exists f)) true arg
-    in
-    if all_exist then `Ok (print_endline "=> doc add")
-    else `Error (false, "An source is not valid")
-  | Del ->
-    try List.map int_of_string arg |> ignore; `Ok (print_endline "=> doc del") with
-      Failure "int_of_string" -> `Error (false, "All ids must be ints")
-
-let source action doc_id arg = match action with
-  | Add ->
-    `Ok (print_endline "=> source add")
-  | Del ->
-    try List.map int_of_string arg |> ignore; `Ok (print_endline "=> doc del") with
-      Failure "int_of_string" -> `Error (false, "All ids must be ints")
-
-let tag action doc_id arg = match action with
-  | Add ->
-    `Ok (print_endline "=> tag add")
-  | Del ->
-    `Ok (print_endline "=> tag del")
-
-let update_title _ doc_id new_title = print_endline "=> update_title"
-
-let show ids = print_endline "=> show"
-
-let open_src id src_id = print_endline "=> open"
-
-(* Command line interface *)
-
-(* Custom converters *)
+(* Custom converters ******************)
 
 (* action converter *)
 let action_conv =
   let parse = function
-    | "add" -> `Ok Add
-    | "del" -> `Ok Del
+    | "add" -> `Ok `Add
+    | "del" -> `Ok `Del
     | _ -> `Error "invalid action" in
   parse, fun ppf p -> Format.fprintf ppf "%s" (str_of_action p)
 
@@ -63,7 +21,10 @@ let singleton_conv x str_of_x error_msg =
   let parse y = if x = y then `Ok x else `Error (error_msg y) in
   parse, fun ppf p -> Format.fprintf ppf "%s" (str_of_x x)
 
-(* Commands *)
+(* Commands ***************************)
+
+let db = Db.load Config.db_file
+let db_t = Term.pure db
 
 let initialize_cmd =
   let directory =
@@ -76,7 +37,7 @@ let initialize_cmd =
     `P "Initialize a new database into a directory.
 The database will index files contained in this directory";
   ] in
-  Term.(pure initialize $ directory),
+  Term.(pure initialize $ db_t $ directory),
   Term.info "init" ~doc ~man
 
 let doc_cmd =
@@ -98,7 +59,7 @@ let doc_cmd =
     `P "- $(b,del), the document of id $(b,ARG) is removed"; `Noblank;
     `P "If multiple document ids are indicated, each document is removed.";
   ] in
-  Term.(ret (pure document $ action $ arg)),
+  Term.(ret (pure document $ db_t $ action $ arg)),
   Term.info "doc" ~doc ~man
 
 let source_cmd =
@@ -122,7 +83,7 @@ let source_cmd =
     `P "- $(b,add), the sources $(b,ARGS) are added to the document of id $(b,DOC_ID)"; `Noblank;
     `P "- $(b,del), the sources of ids $(b,ARGS) are removed from the document of id $(b,DOC_ID)";
   ] in
-  Term.(ret (pure source $ action $ doc_id $ arg)),
+  Term.(ret (pure source $ db_t $ action $ doc_id $ arg)),
   Term.info "source" ~doc ~man
 
 let tag_cmd =
@@ -146,7 +107,7 @@ let tag_cmd =
     `P "- $(b,add), the tags $(b,TAGS) are added to the document of id $(b,DOC_ID)"; `Noblank;
     `P "- $(b,del), the tags $(b,TAGS) are removed from the document of id $(b,DOC_ID)";
   ] in
-  Term.(ret (pure tag $ action $ doc_id $ arg)),
+  Term.(ret (pure tag $ db_t $ action $ doc_id $ arg)),
   Term.info "tag" ~doc ~man
 
 let title_cmd =
@@ -163,7 +124,7 @@ let title_cmd =
   in
   let new_title =
     let doc = "The new title" in
-    Arg.(required & pos 3 (some string) None & info [] ~docv:"TITLE" ~doc)
+    Arg.(value & pos 3 (some string) None & info [] ~docv:"TITLE" ~doc)
   in
   let doc = "Modify the title of a document" in
   let man = [
@@ -171,13 +132,13 @@ let title_cmd =
     `P "Update the title of a document";
     `P "With $(b,ACTION) being $(b,update), the title of the document of id $(b,DOC_ID) is set to $(b,TITLE).";
   ] in
-  Term.(pure update_title $ action $ doc_id $ new_title),
+  Term.(ret (pure update_title $ db_t $ action $ doc_id $ new_title)),
   Term.info "title" ~doc ~man
 
 let show_cmd =
   let ids =
     let doc = "Ids of the documents to show" in
-    Arg.(value & pos_all string [] & info [] ~docv:"DOC_IDs" ~doc)
+    Arg.(value & pos_all int [] & info [] ~docv:"DOC_IDs" ~doc)
   in
   let doc = "Show informations about some or all documents in the database" in
   let man = [
@@ -185,7 +146,7 @@ let show_cmd =
     `P "Display informations about documents of ids $(b,DOC_IDs)."; `Noblank;
     `P "If $(b,DOC_IDs) is empty, display informations of $(i,all) documents in the database";
   ] in
-  Term.(pure show $ ids),
+  Term.(pure show $ db_t $ ids),
   Term.info "show" ~doc ~man
 
 let search_cmd =
@@ -229,7 +190,7 @@ let search_cmd =
     `P "With $(b,author:), $(b,au:) or $(b,a:), only authors"; `Noblank;
     `P "With $(b,source:), $(b,src:) or $(b,s:), only sources"]
   in
-  Term.(pure search $ max_results $ keywords),
+  Term.(pure search $ db_t $ max_results $ keywords),
   Term.info "search" ~doc ~man
 
 let open_cmd =
@@ -247,7 +208,7 @@ let open_cmd =
     `P "Open the source(s) of a document";
     `P "Open the sources of ids $(b,SRC_IDs) of the document of id $(b,DOC_ID). If $(b,SRC_IDs) is empty, the source of id $(i,0) is opened";
   ] in
-  Term.(pure open_src $ id $ src_id),
+  Term.(ret (pure open_src $ db_t $ id $ src_id)),
   Term.info "open" ~doc ~man
 
 let default_cmd =
@@ -264,6 +225,9 @@ let cmds = [initialize_cmd;
             search_cmd;
             open_cmd]
 
-let () = match Term.eval_choice default_cmd cmds with
+let () = 
+  let res = Term.eval_choice default_cmd cmds in
+  Db.store Config.db_file db;
+  match res with
   | `Error _ -> exit 1
   | _ -> exit 0
