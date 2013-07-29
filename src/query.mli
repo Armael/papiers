@@ -6,6 +6,8 @@ type query_elt =
 | Source of string
 | Tag of string
 
+val str_of_query_elt : query_elt -> string
+
 type query = query_elt list
 
 val eval : query -> Db.document -> float * float

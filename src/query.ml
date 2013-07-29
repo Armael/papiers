@@ -44,6 +44,14 @@ type query_elt =
 | Source of string
 | Tag of string
 
+let str_of_query_elt = function
+| Id i -> "id:" ^ (string_of_int i)
+| String s -> s
+| Title s -> "title:" ^ s
+| Author s -> "author:" ^ s
+| Source s -> "source:" ^ s
+| Tag s -> "tag:" ^ s
+
 type query = query_elt list
 
 let eval_query_elt (elt: query_elt) (doc: Db.document): float * float =

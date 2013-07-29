@@ -1,312 +1,269 @@
 open Batteries
+open Cmdliner
 
-module PathGen = BatPathGen.OfString
-module Glob = BatGlobal
+(* Implementation *)
 
-(* Path to the directory that contains the database *)
-let db_base_path = PathGen.of_string Config.db_file |> PathGen.parent
+(* Commands *)
 
-(* Utility functions **********************************************************)
+type action =
+| Add
+| Del
 
-let glob_get_couple (u, v) =
-  match (Glob.get u, Glob.get v) with
-  | (Some u, Some v) -> Some (u, v)
-  | _ -> None
+let str_of_action = function
+  | Add -> "Add"
+  | Del -> "Del"
 
-let iter_effect_tl (f: 'a -> unit) (effect: unit -> unit) (l: 'a list) =
-  match l with
-  | [] -> ()
-  | [x] -> f x
-  | x::xs -> f x; List.iter (fun x -> effect (); f x) xs
+let initialize dir = print_endline "=> initialize"
+let search max_res query = print_endline "=> search"
+let add obj args = print_endline "=> add" (* useless *)
 
-let iteri_effects (f: int -> 'a -> unit)
-    ~(before: unit -> unit)
-    ~(between: unit -> unit)
-    (l: 'a list) =
-  match l with
-  | [] -> ()
-  | [x] -> before (); f 0 x
-  | x::xs -> before (); f 0 x; List.iteri (fun i x -> between (); f (i+1) x) xs
+let document action arg = match action with
+  | Add ->
+    let all_exist = List.fold_left
+      (fun acc f -> acc && (Sys.file_exists f)) true arg
+    in
+    if all_exist then `Ok (print_endline "=> doc add")
+    else `Error (false, "An source is not valid")
+  | Del ->
+    try List.map int_of_string arg |> ignore; `Ok (print_endline "=> doc del") with
+      Failure "int_of_string" -> `Error (false, "All ids must be ints")
 
+let source action doc_id arg = match action with
+  | Add ->
+    `Ok (print_endline "=> source add")
+  | Del ->
+    try List.map int_of_string arg |> ignore; `Ok (print_endline "=> doc del") with
+      Failure "int_of_string" -> `Error (false, "All ids must be ints")
 
-let spawn (cmd: string) =
-  if Unix.fork () = 0 then (
-    Unix.setsid () |> ignore;
-    Unix.execv
-      "/bin/sh"
-      [| "/bin/sh"; "-c"; cmd |]
-  )
+let tag action doc_id arg = match action with
+  | Add ->
+    `Ok (print_endline "=> tag add")
+  | Del ->
+    `Ok (print_endline "=> tag del")
 
-let filter_i (n: int) (l: 'a list) =
-  List.fold_left (fun (id, acc) x ->
-    (id + 1,
-     if n <> id then x::acc else acc)
-  ) (0, []) l
-  |> snd |> List.rev
+let update_title _ doc_id new_title = print_endline "=> update_title"
 
+let show ids = print_endline "=> show"
 
-(* Path manipulation **********************************************************)
+let open_src id src_id = print_endline "=> open"
 
-(* Output [path] relatively to [db_base_path] *)
-let relative_path (path: PathGen.t) =
-  try
-    PathGen.relative_to_parent db_base_path path
-  with PathGen.Not_parent -> path
+(* Command line interface *)
 
-(* Take [path], relative to the current working directory, and output
-   the absolute path *)
-let full_path_in_cwd (path: PathGen.t) =
-  if PathGen.is_relative path then
-    PathGen.(
-      concat
-        (of_string (Unix.getcwd ()))
-        path
-    )
-  else
-    path
+(* Custom converters *)
 
-(* Take [path], relative to the db location, and output the absolute
-   path *)
-let full_path_in_db (path: PathGen.t) =
-  if PathGen.is_relative path then
-    PathGen.concat db_base_path path
-  else
-    path
+(* action converter *)
+let action_conv =
+  let parse = function
+    | "add" -> `Ok Add
+    | "del" -> `Ok Del
+    | _ -> `Error "invalid action" in
+  parse, fun ppf p -> Format.fprintf ppf "%s" (str_of_action p)
 
-(* Relocate [path] to be relative to the database location *)
-let relocate (path: string) =
-  path
-  |> PathGen.of_string
-  |> full_path_in_cwd
-  |> relative_path
-  |> PathGen.to_string
+let singleton_conv x str_of_x error_msg =
+  let parse y = if x = y then `Ok x else `Error (error_msg y) in
+  parse, fun ppf p -> Format.fprintf ppf "%s" (str_of_x x)
 
-(* Pretty printing ************************************************************)
+(* Commands *)
 
-module A = ANSITerminal
-module C = Config.Colors
+let initialize_cmd =
+  let directory =
+    let doc = "Directory where the new database should be initialized" in
+    Arg.(value & pos 0 dir "." & info [] ~docv:"DIRECTORY" ~doc)
+  in
+  let doc = "Initialize a new database" in
+  let man = [
+    `S "DESCRIPTION";
+    `P "Initialize a new database into a directory.
+The database will index files contained in this directory";
+  ] in
+  Term.(pure initialize $ directory),
+  Term.info "init" ~doc ~man
 
-let colored = Config.colored_output && Unix.isatty Unix.stdout
+let doc_cmd =
+  let action =
+    let doc = "What to do: $(b,add), $(b,del)" in
+    Arg.(required & pos 0 (some action_conv) None & info [] ~docv:"ACTION" ~doc)
+  in
+  let arg =
+    let doc = "Argument for the action" in
+    Arg.(non_empty & pos_right 0 string [] & info [] ~docv:"ARG" ~doc)
+  in
+  let doc = "Add or remove documents to the database" in
+  let man = [
+    `S "DESCRIPTION";
+    `P "Add or remove documents to the database";
+    `P "If $(b,ACTION) is:"; `Noblank;
+    `P "- $(b,add), a new document is created with $(b,ARG) as a source"; `Noblank;
+    `P "If multiple sources are indicated, a new document is created for each source.";
+    `P "- $(b,del), the document of id $(b,ARG) is removed"; `Noblank;
+    `P "If multiple document ids are indicated, each document is removed.";
+  ] in
+  Term.(ret (pure document $ action $ arg)),
+  Term.info "doc" ~doc ~man
 
-let print_color style =
-  if colored then
-    A.print_string style
-  else
-    print_string
+let source_cmd =
+  let action =
+    let doc = "What to do: $(b,add), $(b,del)" in
+    Arg.(required & pos 0 (some action_conv) None & info [] ~docv:"ACTION" ~doc)
+  in
+  let doc_id =
+    let doc = "Id of the document to modify" in
+    Arg.(required & pos 1 (some int) None & info [] ~docv:"DOC_ID" ~doc)
+  in
+  let arg =
+    let doc = "Argument for the action" in
+    Arg.(non_empty & pos_right 1 string [] & info [] ~docv:"ARGS" ~doc)
+  in
+  let doc = "Add or remove sources from a document" in
+  let man = [
+    `S "DESCRIPTION";
+    `P "Add or remove sources from a document";
+    `P "If $(b,ACTION) is:"; `Noblank;
+    `P "- $(b,add), the sources $(b,ARGS) are added to the document of id $(b,DOC_ID)"; `Noblank;
+    `P "- $(b,del), the sources of ids $(b,ARGS) are removed from the document of id $(b,DOC_ID)";
+  ] in
+  Term.(ret (pure source $ action $ doc_id $ arg)),
+  Term.info "source" ~doc ~man
 
-let display_doc (doc: Db.document) =
-  let open Db in
+let tag_cmd =
+  let action =
+    let doc = "What to do: $(b,add), $(b,del)" in
+    Arg.(required & pos 0 (some action_conv) None & info [] ~docv:"ACTION" ~doc)
+  in
+  let doc_id =
+    let doc = "Id of the document to modify" in
+    Arg.(required & pos 1 (some int) None & info [] ~docv:"DOC_ID" ~doc)
+  in
+  let arg =
+    let doc = "Name(s) of the tag(s)" in
+    Arg.(non_empty & pos_right 1 string [] & info [] ~docv:"TAGS" ~doc)
+  in
+  let doc = "Add or remove tags from a document" in
+  let man = [
+    `S "DESCRIPTION";
+    `P "Add or remove tags from a document";
+    `P "If $(b,ACTION) is:"; `Noblank;
+    `P "- $(b,add), the tags $(b,TAGS) are added to the document of id $(b,DOC_ID)"; `Noblank;
+    `P "- $(b,del), the tags $(b,TAGS) are removed from the document of id $(b,DOC_ID)";
+  ] in
+  Term.(ret (pure tag $ action $ doc_id $ arg)),
+  Term.info "tag" ~doc ~man
 
-  if colored then
-    A.printf C.title "# %d : %s\n" doc.id doc.name
-  else
-    Printf.printf "# %d : %s\n" doc.id doc.name;
+let title_cmd =
+  let action =
+    (* There is only one hardcodded action for now: update *)
+    let doc = "What to do: $(b,update)" in
+    Arg.(required & 
+         pos 0 (some (singleton_conv "update" identity ((^) "Unknown action "))) None &
+         info [] ~docv:"ACTION" ~doc)
+  in
+  let doc_id =
+    let doc = "Id of the document to modify" in
+    Arg.(required & pos 1 (some int) None & info [] ~docv:"DOC_ID" ~doc)
+  in
+  let new_title =
+    let doc = "The new title" in
+    Arg.(required & pos 3 (some string) None & info [] ~docv:"TITLE" ~doc)
+  in
+  let doc = "Modify the title of a document" in
+  let man = [
+    `S "DESCRIPTION";
+    `P "Update the title of a document";
+    `P "With $(b,ACTION) being $(b,update), the title of the document of id $(b,DOC_ID) is set to $(b,TITLE).";
+  ] in
+  Term.(pure update_title $ action $ doc_id $ new_title),
+  Term.info "title" ~doc ~man
 
-  if doc.authors <> [] then (
-    print_newline ();
-    print_color C.authors "Authors : ";
-  );
-  iter_effect_tl print_string (fun () -> print_string ", ") doc.authors;
+let show_cmd =
+  let ids =
+    let doc = "Ids of the documents to show" in
+    Arg.(value & pos_all string [] & info [] ~docv:"DOC_IDs" ~doc)
+  in
+  let doc = "Show documents informations" in
+  let man = [
+    `S "DESCRIPTION";
+    `P "Show informations of database documents";
+    `P "Display informations of documents of ids $(b,DOC_IDs). If $(b,DOC_IDs) is empty, display informations of $(i,all) documents in the database";
+  ] in
+  Term.(pure show $ ids),
+  Term.info "show" ~doc ~man
 
-  iteri_effects
-    ~before:(fun () -> print_newline (); print_color C.sources "Source  :")
-    ~between:(fun () -> print_newline (); print_string "         ")
-    (fun src_id s ->
-      Printf.printf " #%d: file://" src_id;
-      print_string (PathGen.of_string s |> full_path_in_db |> PathGen.to_string);
-    ) doc.source;
-
-  if doc.tags <> [] then (
-    print_newline ();
-    print_color C.tags "Tags    : ";
-  );
-  iter_effect_tl print_string (fun () -> print_string ", ") doc.tags;
-  print_newline ()
-
-(* Papiers actions (add/remove/modify documents,…) ****************************)
-
-let query_doc_infos r source =
-  print_string "Title: ";
-  let title = read_line () |> String.strip in
-
-  print_string "Authors (comma separated): ";
-  let authors =
-    read_line ()
-    |> String.nsplit ~by:","
-    |> List.map String.strip
+let search_cmd =
+  let max_results =
+    let doc = "Maximum number of results to display" in
+    Arg.(value & opt (some int) None & info ["n"; "results-nb"] ~docv:"N" ~doc)
   in
 
-  let source = relocate source in
-
-  print_string "Tags (comma separated): ";
-  let tags =
-    read_line ()
-    |> String.nsplit ~by:","
-    |> List.map String.strip
-  in
-  Glob.set r (title, authors, [source], tags)
-
-let add_doc (db: Db.t) (name, authors, source, tags) =
-  let doc = Db.add db ~name ~source ~authors ~tags in
-  print_string "Succesfully added:\n\n";
-  display_doc doc
-
-let add_source (db: Db.t) (id, path) =
-  let path = relocate path in
-  let doc = Db.get db id in
-  Db.update db { doc with Db.source = List.append doc.Db.source [path] }
-
-let del_source (db: Db.t) (id, src_id) =
-  let doc = Db.get db id in
-  Db.update db { doc with Db.source = filter_i src_id doc.Db.source }
-
-let add_tag (db: Db.t) (id, tag) =
-  let doc = Db.get db id in
-  Db.update db { doc with Db.tags = tag::doc.Db.tags }
-
-let del_tag (db: Db.t) (id, tag) =
-  let doc = Db.get db id in
-  Db.update db { doc with Db.tags = List.filter ((<>) tag) doc.Db.tags }
-
-let del_doc (db: Db.t) id =
-  Db.remove db (Db.get db id)
-
-let print_db (db: Db.t) () =
-  Db.fold List.cons db []
-  |> List.sort (fun a b -> compare a.Db.id b.Db.id)
-  |> iter_effect_tl display_doc print_newline
-
-let open_src (db: Db.t) (input: string) =
-  (* We have to parse the input. Format: <id>[:<src id>] *)
-  let read_int (s: string): int = Scanf.sscanf s "%d" identity in
-
-  let (id, src_id) =
-    try begin
-      try String.split input ~by:":" |> Tuple2.mapn read_int
-      with Not_found | End_of_file -> (read_int input, 0)
-    end with End_of_file ->
-      Printf.printf "Error: %s has incorrect format\n" input;
-      exit 1
-  in
-  let doc = Db.get db id in
-  try
-    let src = List.nth doc.Db.source src_id
-              |> PathGen.of_string
-              |> full_path_in_db
-              |> PathGen.to_string in
-    let cmd = Config.external_reader ^ " " ^ "\'" ^ src ^ "\'" in
-    Printf.printf "Running \'%s\'." cmd;
-    spawn cmd
-  with Invalid_argument _ ->
-    Printf.printf "Error: wrong source id (%d)\n" src_id
-
-(* Main function **************************************************************)
-
-let _ =
-  let doc_to_add = Glob.empty "doc_to_add" in
-  let source_to_add = (Glob.empty "source_to_add_id",
-                       Glob.empty "source_to_add_src") in
-  let source_to_del = (Glob.empty "source_to_del_id",
-                       Glob.empty "source_to_del_src") in
-  let tag_to_add = (Glob.empty "tag_to_add_id",
-                    Glob.empty "tag_to_add_tag") in
-  let tag_to_del = (Glob.empty "tag_to_del_id",
-                    Glob.empty "tag_to_del_tag") in
-  let doc_to_del = Glob.empty "doc_to_del" in
-  let doc_to_open = Glob.empty "doc_to_open" in
-  let print_all = Glob.empty "print_all" in
-
-  let limit_output = Glob.empty "limit_output" in
-
-  let query_elts = ref [] in
-
-  let set_int (r: int Glob.t) = Arg.Int (Glob.set r)
-  and set_string (r: string Glob.t) = Arg.String (Glob.set r)
-  and set_unit (r: unit Glob.t) = Arg.Unit (Glob.set r)
-  in
-
-  Arg.parse [
-    "-a", Arg.String (query_doc_infos doc_to_add),
-    "Add the document passed in argument to the db";
-
-    "--add-source", Arg.Tuple [set_int (fst source_to_add);
-                               set_string (snd source_to_add)],
-    "Add a source to an existing document. Syntax: --add-source <id> <source>";
-
-    "--del-source", Arg.Tuple [set_int (fst source_to_del);
-                               set_int (snd source_to_del)],
-    "Delete a source from an existing document. Syntax: --del-source <id> <src id>";
-
-    "--add-tag", Arg.Tuple [set_int (fst tag_to_add);
-                            set_string (snd tag_to_add)],
-    "Add a tag to an existing document. Syntax: --add-tag <id> <tag>";
-
-    "--del-tag", Arg.Tuple [set_int (fst tag_to_del);
-                            set_string (snd tag_to_del)],
-    "Delete a tag from an existing document. Syntax: --del-tag <id> <tag>";
-
-    "-l", set_unit print_all, "Display the contents of the database";
-
-    "-r", set_int doc_to_del, "Delete a document. Syntax: -r <id>";
-
-    "-o", set_string doc_to_open, "Open a source. Syntax: -o <id>[:<src id>]. <id>: id of the document, <src id> (optional) id of the source";
-
-    "-n", set_int limit_output, "Print only the first K answers of a query. Syntax: -n <K>";
-  ]
-    (fun elt -> query_elts := elt::!query_elts)
-    "Usage: papiers [OPTIONS] keywords...
-The keywords are used to search through the db";
-
-  (* Load the database *)
-  let db: Db.t = Db.load Config.db_file in
-
-  (* Run the options' actions *)
-  let action_done = ref false in
-  let may f = Option.may ((fun () -> action_done := true) % f) in
-
-  doc_to_add    |> Glob.get        |> may @@ add_doc db;
-  source_to_add |> glob_get_couple |> may @@ add_source db;
-  source_to_del |> glob_get_couple |> may @@ del_source db;
-  tag_to_add    |> glob_get_couple |> may @@ add_tag db;
-  tag_to_del    |> glob_get_couple |> may @@ del_tag db;
-  doc_to_del    |> Glob.get        |> may @@ del_doc db;
-  print_all     |> Glob.get        |> may @@ print_db db;
-  doc_to_open   |> Glob.get        |> may @@ open_src db;
-
-  (* If no action have been executed, make a research through the db *)
-  if not !action_done then
-    begin
-      (* Make a research through the db *)
-      let query = List.map (fun elt ->
+  let keywords =
+    let doc = "Keywords used to search through the database" in
+    let kwd_converter =
+      let parse elt =
         try
           match String.split elt ~by:":" with
-          | ("id", s) ->
-            begin try Query.Id (int_of_string s) with
+          | ("id", s) -> (
+            try `Ok (Query.Id (int_of_string s)) with
               Failure "int_of_string" ->
-                Printf.printf "%s must be an int\n" s;
-                exit 1
-            end
-          | ("title", s) | ("ti", s) -> Query.Title s
-          | ("a", s) | ("au", s) | ("author", s) -> Query.Author s
-          | ("s", s) | ("src", s) | ("source", s) -> Query.Source s
-          | ("ta", s) | ("tag", s) -> Query.Tag s
+                `Error (Printf.sprintf "%s must be an int\n" s)
+          )
+          | ("title", s) | ("ti", s) -> `Ok (Query.Title s)
+          | ("a", s) | ("au", s) | ("author", s) -> `Ok (Query.Author s)
+          | ("s", s) | ("src", s) | ("source", s) -> `Ok (Query.Source s)
+          | ("ta", s) | ("tag", s) -> `Ok (Query.Tag s)
           | (unknown, _) ->
-            Printf.printf "Unknown prefix %s\n" unknown;
-            exit 1
+            `Error (Printf.sprintf "Unknown prefix %s\n" unknown)
         with Not_found ->
-          Query.String elt
-      ) !query_elts in
-
-      let ranked_docs =
-        Db.fold (fun doc acc -> (Query.eval query doc, doc)::acc) db []
-        |> List.filter (fun ((u, v), _) -> not (u = 0. && v = 0.))
-        |> List.sort (fun a b -> compare (fst b) (fst a))
-        |> List.map snd
+          `Ok (Query.String elt)
       in
+      parse, fun ppf p -> Format.fprintf ppf "%s" (Query.str_of_query_elt p)
+    in
 
-      (Glob.get limit_output |> Option.map (flip List.take ranked_docs))
-      |? ranked_docs
-      |> iter_effect_tl display_doc print_newline
-    end;
+    Arg.(non_empty & pos_all kwd_converter [] & info [] ~docv:"KEYWORDS" ~doc)
+  in
+  let doc = "Search through the database" in
+  let man = [
+    `S "DESCRIPTION";
+    `P "Search through the database, given a list of keywords.";
+    `P "Each keyword can be prefixed by an identifier in order to refine its scope:";
+    `P "With $(b,tag:) or $(b,ta:), a keyword will only match tags"; `Noblank;
+    `P "With $(b,title:) or $(b,ti:), only titles"; `Noblank;
+    `P "With $(b,author:), $(b,au:) or $(b,a:), only authors"; `Noblank;
+    `P "With $(b,source:), $(b,src:) or $(b,s:), only sources"]
+  in
+  Term.(pure search $ max_results $ keywords),
+  Term.info "search" ~doc ~man
 
-  Db.store Config.db_file db
+let open_cmd =
+  let id =
+    let doc = "Id of the document" in
+    Arg.(required & pos 0 (some int) None & info [] ~docv:"DOC_ID" ~doc)
+  in
+  let src_id =
+    let doc = "Ids of the sources to open" in
+    Arg.(value & pos_right 0 int [0] & info [] ~docv:"SRC_IDs" ~doc)
+  in
+  let doc = "Open the source(s) of a document" in
+  let man = [
+    `S "DESCRIPTION";
+    `P "Open the source(s) of a document";
+    `P "Open the sources of ids $(b,SRC_IDs) of the document of id $(b,DOC_ID). If $(b,SRC_IDs) is empty, the source of id $(i,0) is opened";
+  ] in
+  Term.(pure open_src $ id $ src_id),
+  Term.info "open" ~doc ~man
+
+let default_cmd =
+  let doc = "index your documents and quickly search through them" in
+  Term.(ret (pure (`Help (`Pager, None)))),
+  Term.info "papiers" ~version:"0.2" ~doc
+
+let cmds = [initialize_cmd;
+            doc_cmd;
+            title_cmd;
+            source_cmd;
+            tag_cmd;
+            show_cmd;
+            search_cmd;
+            open_cmd]
+
+let () = match Term.eval_choice default_cmd cmds with
+  | `Error _ -> exit 1
+  | _ -> exit 0
