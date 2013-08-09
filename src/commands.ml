@@ -68,12 +68,11 @@ let full_path_in_db (path: PathGen.t) =
     path
 
 (* Relocate [path] to be relative to the database location *)
-let relocate (path: string) =
+let relocate (path: PathGen.t) =
   path
-  |> PathGen.of_string
   |> full_path_in_cwd
   |> relative_path
-  |> PathGen.to_string
+  |> PathGen.normalize
 
 (* Pretty printing ************************************************************)
 
@@ -107,7 +106,7 @@ let display_doc (doc: Db.document) =
     ~between:(fun () -> print_newline (); print_string "         ")
     (fun src_id s ->
       Printf.printf " #%d: file://" src_id;
-      print_string (PathGen.of_string s |> full_path_in_db |> PathGen.to_string);
+      print_string (full_path_in_db s |> PathGen.to_string);
     ) doc.source;
 
   if doc.tags <> [] then (
@@ -123,7 +122,7 @@ let str_of_action = function
   | `Add -> "Add"
   | `Del -> "Del"
 
-let query_doc_infos source =
+let query_doc_infos (source: PathGen.t) =
   print_string "Title: ";
   let title = read_line () |> String.strip in
 
@@ -134,22 +133,20 @@ let query_doc_infos source =
     |> List.map String.strip
   in
 
-  let source = relocate source in
-
   print_string "Tags (comma separated): ";
   let tags =
     read_line ()
     |> String.nsplit ~by:","
     |> List.map String.strip
   in
-  (title, authors, [source], tags)
+  (title, authors, tags)
 
-let check_sources srcs =
+let check_sources (srcs: string list) =
   try let nexist = List.find (neg Sys.file_exists) srcs in
       `Error (nexist ^ " is not a valid source")
   with Not_found -> `Ok
 
-let check_ids ids =
+let check_ids (ids: string list) =
   try let nint = List.find (fun s -> 
     try int_of_string s |> ignore; false with
       Failure "int_of_string" -> true) ids in
@@ -174,17 +171,30 @@ let search db max_res query =
   |> iter_effect_tl display_doc print_newline
 
 (* Doc *)
-let document (db: Db.t) action arg = match action with
+let document (db: Db.t) action arg =
+  let source_already_exists (source: PathGen.t) =
+    Db.find_opt (fun doc ->
+      List.Exceptionless.find ((=) source) doc.Db.source
+      |> Option.is_some
+    ) db
+    |> Option.is_some
+  in
+
+  match action with
   | `Add ->
     begin match check_sources arg with
     | `Error e -> `Error (false, e)
     | `Ok ->
       iter_effect_tl
         (fun src ->
-          let (name, authors, source, tags) = query_doc_infos src in
-          let doc = Db.add db ~name ~source ~authors ~tags in
-          print_string "\nSuccessfully added:\n";
-          display_doc doc)
+          let src = PathGen.of_string src |> relocate in
+          
+          if not (source_already_exists src) then
+            let (name, authors, tags) = query_doc_infos src in
+            let doc = Db.add db ~name ~source:[src] ~authors ~tags in
+            print_string "\nSuccessfully added:\n";
+            display_doc doc
+        )
         print_newline
         arg;
       `Ok ()
@@ -216,7 +226,7 @@ let source (db: Db.t) action doc_id arg =
       begin match check_sources arg with
       | `Error e -> `Error (false, e)
       | `Ok ->
-        let arg = List.map relocate arg in
+        let arg = List.map (relocate % PathGen.of_string) arg in
         Db.update db { doc with Db.source = List.append doc.Db.source arg };
         `Ok ()
       end
@@ -289,7 +299,6 @@ let open_src db id src_ids =
     List.iter (fun src_id ->
      try
         let src = List.nth doc.Db.source src_id
-                  |> PathGen.of_string
                   |> full_path_in_db
                   |> PathGen.to_string in
         let cmd = Config.external_reader ^ " " ^ "\'" ^ src ^ "\'" in

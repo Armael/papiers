@@ -1,5 +1,7 @@
 open Batteries
 
+module PathGen = BatPathGen.OfString
+
 let (++) (a, b) (u, v) = (a +. u, b +. v)
 
 let min3 a b c =
@@ -86,13 +88,16 @@ let eval_query_elt (elt: query_elt) (doc: Db.document): float * float =
   | Id i -> if doc.id = i then (1., 0.) else (0., 0.)
   | String s ->
     make_search s
-      (List.flatten [[doc.name]; doc.authors; doc.source; doc.tags])
+      (List.flatten [[doc.name];
+                     doc.authors;
+                     List.map PathGen.to_string doc.source;
+                     doc.tags])
   | Title s ->
     make_search s [doc.name]
   | Author s ->
     make_search s doc.authors
   | Source s ->
-    make_search s doc.source
+    make_search s (List.map PathGen.to_string doc.source)
   | Tag s ->
     make_search s doc.tags
 

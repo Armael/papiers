@@ -1,16 +1,18 @@
 open Batteries
 
+module PathGen = BatPathGen.OfString
+
 type document = {
   id: int;
   name: string;
   authors: string list;
-  source: string list;
+  source: PathGen.t list;
   tags: string list;
 }
 
 module IntH = Hashtbl.Make (struct
   type t = int
-  let equal = (=)
+  let equal = Int.equal
   let hash = Hashtbl.hash
 end)
 
@@ -39,6 +41,17 @@ let iter f db =
 let fold f db acc =
   IntH.fold (fun _ doc acc -> f doc acc) db acc
 
+exception Found of document
+
+let find (p: document -> bool) db =
+  try
+    iter (fun doc -> if p doc then raise (Found doc)) db;
+    raise Not_found
+  with Found doc -> doc
+
+let find_opt (p: document -> bool) db =
+  try Some (find p db) with Not_found -> None
+
 (* JSON backend: the database is stored as a JSON object *)
 
 module Json = Yojson.Basic
@@ -46,13 +59,14 @@ module Json = Yojson.Basic
 (* Converting [t] -> [Json.json] *)
 
 let json_of_document (doc: document): Json.json =
-  let strlst2json l = List.map (fun s -> `String s) l in
+  let strlst2json = List.map (fun s -> `String s) in
+  let srclst2json = List.map (fun s -> `String (PathGen.to_string s)) in
   let open Json in
   `Assoc [
     "id", `Int doc.id;
     "name", `String doc.name;
     "authors", `List (strlst2json doc.authors);
-    "source", `List (strlst2json doc.source);
+    "source", `List (srclst2json doc.source);
     "tags", `List (strlst2json doc.tags);
   ]
 
@@ -69,11 +83,21 @@ let document_of_json (json: Json.json): document =
   let to_list_option = to_option to_list in
 
   let json2strlst = List.filter_map to_string_option in
+  let json2srclst = List.filter_map (fun src ->
+    try
+      to_string_option src
+      |> Option.map PathGen.of_string
+      |> Option.map PathGen.normalize
+    with PathGen.Illegal_char ->
+      Printf.eprintf "Invalid path %s. Ignoring it\n"
+        (to_string_option src |> Option.get);
+      None
+  ) in
 
   let id = json |> member "id" |> to_int in
   let name = json |> member "name" |> to_string_option |? "" in
   let authors = json |> member "authors" |> to_list_option |? [] |> json2strlst in
-  let source = json |> member "source" |> to_list_option |? [] |> json2strlst in
+  let source = json |> member "source" |> to_list_option |? [] |> json2srclst in
   let tags = json |> member "tags" |> to_list_option |? [] |> json2strlst in
 
   { id; name; authors; source; tags }
@@ -90,4 +114,4 @@ let load (file: string) =
   with Sys_error _ -> create ()
 
 let store (file: string) (db: t) =
-  db |> json_of_t |> Json.to_file file;
+  db |> json_of_t |> Json.to_file file
