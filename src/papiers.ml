@@ -23,9 +23,6 @@ let singleton_conv x str_of_x error_msg =
 
 (* Commands ***************************)
 
-let db = Db.load Config.db_file
-let db_t = Term.pure db
-
 let initialize_cmd =
   let directory =
     let doc = "Directory where the new database should be initialized" in
@@ -37,7 +34,7 @@ let initialize_cmd =
     `P "Initialize a new database into a directory.
 The database will index files contained in this directory";
   ] in
-  Term.(pure initialize $ db_t $ directory),
+  Term.(pure initialize $ directory),
   Term.info "init" ~doc ~man
 
 let doc_cmd =
@@ -59,7 +56,7 @@ let doc_cmd =
     `P "- $(b,del), the document of id $(b,ARG) is removed"; `Noblank;
     `P "If multiple document ids are indicated, each document is removed.";
   ] in
-  Term.(ret (pure document $ db_t $ action $ arg)),
+  Term.(ret (pure document $ action $ arg)),
   Term.info "doc" ~doc ~man
 
 let source_cmd =
@@ -83,7 +80,7 @@ let source_cmd =
     `P "- $(b,add), the sources $(b,ARGS) are added to the document of id $(b,DOC_ID)"; `Noblank;
     `P "- $(b,del), the sources of ids $(b,ARGS) are removed from the document of id $(b,DOC_ID)";
   ] in
-  Term.(ret (pure source $ db_t $ action $ doc_id $ arg)),
+  Term.(ret (pure source $ action $ doc_id $ arg)),
   Term.info "source" ~doc ~man
 
 let tag_cmd =
@@ -107,7 +104,7 @@ let tag_cmd =
     `P "- $(b,add), the tags $(b,TAGS) are added to the document of id $(b,DOC_ID)"; `Noblank;
     `P "- $(b,del), the tags $(b,TAGS) are removed from the document of id $(b,DOC_ID)";
   ] in
-  Term.(ret (pure tag $ db_t $ action $ doc_id $ arg)),
+  Term.(ret (pure tag $ action $ doc_id $ arg)),
   Term.info "tag" ~doc ~man
 
 let title_cmd =
@@ -132,7 +129,7 @@ let title_cmd =
     `P "Update the title of a document";
     `P "With $(b,ACTION) being $(b,update), the title of the document of id $(b,DOC_ID) is set to $(b,TITLE).";
   ] in
-  Term.(ret (pure update_title $ db_t $ action $ doc_id $ new_title)),
+  Term.(ret (pure update_title $ action $ doc_id $ new_title)),
   Term.info "title" ~doc ~man
 
 let show_cmd =
@@ -146,7 +143,7 @@ let show_cmd =
     `P "Display informations about documents of ids $(b,DOC_IDs)."; `Noblank;
     `P "If $(b,DOC_IDs) is empty, display informations of $(i,all) documents in the database";
   ] in
-  Term.(pure show $ db_t $ ids),
+  Term.(pure show $ ids),
   Term.info "show" ~doc ~man
 
 let search_cmd =
@@ -195,7 +192,7 @@ let search_cmd =
     `P "With $(b,author:), $(b,au:) or $(b,a:), only authors"; `Noblank;
     `P "With $(b,source:), $(b,src:) or $(b,s:), only sources"]
   in
-  Term.(pure search $ db_t $ short $ max_results $ keywords),
+  Term.(pure search $ short $ max_results $ keywords),
   Term.info "search" ~doc ~man
 
 let open_cmd =
@@ -213,7 +210,7 @@ let open_cmd =
     `P "Open the source(s) of a document";
     `P "Open the sources of ids $(b,SRC_IDs) of the document of id $(b,DOC_ID). If $(b,SRC_IDs) is empty, the source of id $(i,0) is opened";
   ] in
-  Term.(ret (pure open_src $ db_t $ id $ src_id)),
+  Term.(ret (pure open_src $ id $ src_id)),
   Term.info "open" ~doc ~man
 
 let default_cmd =
@@ -232,7 +229,6 @@ let cmds = [initialize_cmd;
 
 let () = 
   let res = Term.eval_choice default_cmd cmds in
-  Db.store Config.db_file db;
   match res with
   | `Error _ -> exit 1
   | _ -> exit 0

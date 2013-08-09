@@ -115,3 +115,5 @@ let load (file: string) =
 
 let store (file: string) (db: t) =
   db |> json_of_t |> Json.to_file file
+
+let out_name = ".papiers.db"

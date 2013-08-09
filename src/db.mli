@@ -28,3 +28,5 @@ val find_opt : (document -> bool) -> t -> document option
 
 val load : string -> t
 val store : string -> t -> unit
+
+val out_name : string

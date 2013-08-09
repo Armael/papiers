@@ -4,7 +4,30 @@ module PathGen = BatPathGen.OfString
 module Glob = BatGlobal
 
 (* Path to the directory that contains the database *)
-let db_base_path = PathGen.of_string Config.db_file |> PathGen.parent
+let db_base_path =
+  let open PathGen in
+
+  let cwd = Sys.getcwd () |> of_string |> normalize in
+  let has_db (dir: PathGen.t) =
+    let db = append dir Db.out_name |> to_string in
+    Sys.file_exists db && (not (Sys.is_directory db))
+  in
+
+  let parents = Enum.seq cwd (normalize % parent) ((<>) root) in
+  Enum.Exceptionless.find has_db parents
+
+let get_db_path () =
+  match db_base_path with
+  | Some p -> p
+  | None ->
+    Printf.eprintf "This is not a papiers repository (or any parent)\n";
+    exit 1
+
+let get_db_name () =
+  PathGen.append (get_db_path ()) Db.out_name |> PathGen.to_string
+
+let load_db () = Db.load (get_db_name ())
+let store_db db = Db.store (get_db_name ()) db
 
 (* Utility functions **********************************************************)
 
@@ -44,7 +67,7 @@ let filteri (p: int -> 'a -> bool) (l: 'a list) =
 (* Output [path] relatively to [db_base_path] *)
 let relative_path (path: PathGen.t) =
   try
-    PathGen.relative_to_parent db_base_path path
+    PathGen.relative_to_parent (get_db_path ()) path
   with PathGen.Not_parent -> path
 
 (* Take [path], relative to the current working directory, and output
@@ -63,7 +86,7 @@ let full_path_in_cwd (path: PathGen.t) =
    path *)
 let full_path_in_db (path: PathGen.t) =
   if PathGen.is_relative path then
-    PathGen.concat db_base_path path
+    PathGen.concat (get_db_path ()) path
   else
     path
 
@@ -154,11 +177,14 @@ let check_ids (ids: string list) =
   with Not_found -> `Ok
 
 (* Initialize *)
-let initialize db dir =
-  print_endline "Useless for now. The database path is specified in config.ml"
+let initialize (dir: string) =
+  let dir = PathGen.of_string dir in
+  let empty_db = Db.create () in
+  Db.store PathGen.(append dir Db.out_name |> to_string) empty_db
 
 (* Search *)
-let search db short max_res query =
+let search short max_res query =
+  let db = load_db () in
   let ranked_docs =
     Db.fold (fun doc acc -> (Query.eval query doc, doc)::acc) db []
     |> List.filter (fun ((u, v), _) -> not (u = 0. && v = 0.))
@@ -179,7 +205,8 @@ let search db short max_res query =
   |> display
 
 (* Doc *)
-let document (db: Db.t) action arg =
+let document action arg =
+  let db = load_db () in
   let source_already_exists (source: PathGen.t) =
     Db.find_opt (fun doc ->
       List.Exceptionless.find ((=) source) doc.Db.source
@@ -205,7 +232,7 @@ let document (db: Db.t) action arg =
         )
         print_newline
         arg;
-      `Ok ()
+      `Ok (store_db db)
     end
 
   | `Del ->
@@ -221,11 +248,12 @@ let document (db: Db.t) action arg =
           with Not_found -> Printf.eprintf "There is no document with id %d\n" id
         )
         arg;
-      `Ok ()
+      `Ok (store_db db)
     end
 
 (* Source *)
-let source (db: Db.t) action doc_id arg =
+let source action doc_id arg =
+  let db = load_db () in
   try
     let doc = Db.get db doc_id in
 
@@ -236,7 +264,7 @@ let source (db: Db.t) action doc_id arg =
       | `Ok ->
         let arg = List.map (relocate % PathGen.of_string) arg in
         Db.update db { doc with Db.source = List.append doc.Db.source arg };
-        `Ok ()
+        `Ok (store_db db)
       end
 
     | `Del ->
@@ -247,13 +275,14 @@ let source (db: Db.t) action doc_id arg =
         Db.update db { doc with
           Db.source = filteri (fun i _ -> not (List.mem i ids)) doc.Db.source
         };
-        `Ok ()
+        `Ok (store_db db)
       end
   with Not_found ->
     `Error (false, "There is no document with id " ^ (string_of_int doc_id))
 
 (* Tag *)
-let tag (db: Db.t) action doc_id arg = 
+let tag action doc_id arg = 
+  let db = load_db () in
   try
     let doc = Db.get db doc_id in
     
@@ -265,12 +294,13 @@ let tag (db: Db.t) action doc_id arg =
         Db.tags = List.filter (neg (flip List.mem arg)) doc.Db.tags
       }
     end;
-    `Ok ()
+    `Ok (store_db db)
   with Not_found ->
     `Error (false, "There is no document with id " ^ (string_of_int doc_id))
 
 (* Title *)
-let update_title db _ doc_id new_title =
+let update_title _ doc_id new_title =
+  let db = load_db () in
   let title = match new_title with
     | Some t -> t
     | None ->
@@ -281,12 +311,13 @@ let update_title db _ doc_id new_title =
   try
     let doc = Db.get db doc_id in    
     Db.update db { doc with Db.name = title };
-    `Ok ()
+    `Ok (store_db db)
   with Not_found ->
     `Error (false, "There is no document with id " ^ (string_of_int doc_id))
 
 (* Show *)
-let show db ids =
+let show ids =
+  let db = load_db () in
   let maybe_get id =
     try Some (Db.get db id) with Not_found -> None
   in
@@ -301,7 +332,8 @@ let show db ids =
   iter_effect_tl display_doc print_newline docs
 
 (* Open *)
-let open_src db id src_ids =
+let open_src id src_ids =
+  let db = load_db () in
   try
     let doc = Db.get db id in
     List.iter (fun src_id ->
