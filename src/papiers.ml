@@ -155,6 +155,11 @@ let search_cmd =
     Arg.(value & opt (some int) None & info ["n"; "results-nb"] ~docv:"N" ~doc)
   in
 
+  let short =
+    let doc = "Only display the ids of the documents" in
+    Arg.(value & flag & info ["short"; "s"] ~doc)
+  in
+
   let keywords =
     let doc = "Keywords used to search through the database" in
     let kwd_converter =
@@ -190,7 +195,7 @@ let search_cmd =
     `P "With $(b,author:), $(b,au:) or $(b,a:), only authors"; `Noblank;
     `P "With $(b,source:), $(b,src:) or $(b,s:), only sources"]
   in
-  Term.(pure search $ db_t $ max_results $ keywords),
+  Term.(pure search $ db_t $ short $ max_results $ keywords),
   Term.info "search" ~doc ~man
 
 let open_cmd =

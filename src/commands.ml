@@ -158,17 +158,25 @@ let initialize db dir =
   print_endline "Useless for now. The database path is specified in config.ml"
 
 (* Search *)
-let search db max_res query =
+let search db short max_res query =
   let ranked_docs =
     Db.fold (fun doc acc -> (Query.eval query doc, doc)::acc) db []
     |> List.filter (fun ((u, v), _) -> not (u = 0. && v = 0.))
     |> List.sort (fun a b -> compare (fst b) (fst a))
     |> List.map snd
   in
+
+  let display =
+    if short then
+      iter_effect_tl (fun doc -> print_int doc.Db.id)
+        (fun () -> print_char ' ')
+    else
+      iter_effect_tl display_doc print_newline
+  in
   
   (max_res |> Option.map (flip List.take ranked_docs))
   |? ranked_docs
-  |> iter_effect_tl display_doc print_newline
+  |> display
 
 (* Doc *)
 let document (db: Db.t) action arg =
