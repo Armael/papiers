@@ -61,50 +61,6 @@ let filteri (p: int -> 'a -> bool) (l: 'a list) =
   ) (0, []) l
   |> snd |> List.rev
 
-
-(* Path manipulation **********************************************************)
-
-(* Output [path] relatively to [db_base_path] *)
-let relative_path (path: PathGen.t) =
-  try
-    PathGen.relative_to_parent (get_db_path ()) path
-  with PathGen.Not_parent -> path
-
-(* Take [path], relative to the current working directory, and output
-   the absolute path *)
-let full_path_in_cwd (path: PathGen.t) =
-  if PathGen.is_relative path then
-    PathGen.(
-      concat
-        (of_string (Unix.getcwd ()))
-        path
-    )
-  else
-    path
-
-(* Take [path], relative to the db location, and output the absolute
-   path *)
-let full_path_in_db (path: PathGen.t) =
-  if PathGen.is_relative path then
-    PathGen.concat (get_db_path ()) path
-  else
-    path
-
-(* Relocate [path] to be relative to the database location *)
-let relocate (path: PathGen.t) =
-  let relocated = path
-    |> full_path_in_cwd
-    |> relative_path
-    |> PathGen.normalize
-  in
-  if PathGen.is_absolute relocated then (
-    (* [path] was not pointing to a file in the repository *)
-    Printf.eprintf "Error: %s is outside repository\n"
-      (PathGen.to_string path);
-    exit 1
-  );
-  relocated
-
 (* Pretty printing ************************************************************)
 
 module A = ANSITerminal
@@ -135,9 +91,9 @@ let display_doc (doc: Db.document) =
   iteri_effects
     ~before:(fun () -> print_newline (); print_color C.sources "Source  :")
     ~between:(fun () -> print_newline (); print_string "         ")
-    (fun src_id s ->
-      Printf.printf " #%d: file://" src_id;
-      print_string (full_path_in_db s |> PathGen.to_string);
+    (fun src_id src ->
+      Printf.printf " #%d: " src_id;
+      print_string (Source.export (get_db_path ()) src);
     ) doc.source;
 
   if doc.tags <> [] then (
@@ -153,7 +109,7 @@ let str_of_action = function
   | `Add -> "Add"
   | `Del -> "Del"
 
-let query_doc_infos (source: PathGen.t) =
+let query_doc_infos () =
   print_string "Title: ";
   let title = read_line () |> String.strip in
 
@@ -215,7 +171,7 @@ let search short max_res query =
 (* Doc *)
 let document action arg =
   let db = load_db () in
-  let source_already_exists (source: PathGen.t) =
+  let source_already_exists (source: Source.t) =
     Db.find_opt (fun doc ->
       List.Exceptionless.find ((=) source) doc.Db.source
       |> Option.is_some
@@ -225,21 +181,28 @@ let document action arg =
 
   match action with
   | `Add ->
-    begin match check_sources arg with
+    let db_path = get_db_path () in
+    let sources = List.map (Source.import db_path) arg in
+
+    let check = List.filter_map (fun src ->
+      match src with
+      | Source.File f -> Some (PathGen.to_string f)
+      | _ -> None
+    ) sources |> check_sources in
+
+    begin match check with
     | `Error e -> `Error (false, e)
     | `Ok ->
       iter_effect_tl
         (fun src ->
-          let src = PathGen.of_string src |> relocate in
-          
           if not (source_already_exists src) then
-            let (name, authors, tags) = query_doc_infos src in
+            let (name, authors, tags) = query_doc_infos () in
             let doc = Db.add db ~name ~source:[src] ~authors ~tags in
             print_string "\nSuccessfully added:\n";
             display_doc doc
         )
         print_newline
-        arg;
+        sources;
       `Ok (store_db db)
     end
 
@@ -270,8 +233,9 @@ let source action doc_id arg =
       begin match check_sources arg with
       | `Error e -> `Error (false, e)
       | `Ok ->
-        let arg = List.map (relocate % PathGen.of_string) arg in
-        Db.update db { doc with Db.source = List.append doc.Db.source arg };
+        let db_path = get_db_path () in
+        let sources = List.map (Source.import db_path) arg in
+        Db.update db { doc with Db.source = List.append doc.Db.source sources };
         `Ok (store_db db)
       end
 
@@ -347,8 +311,7 @@ let open_src id src_ids =
     List.iter (fun src_id ->
      try
         let src = List.nth doc.Db.source src_id
-                  |> full_path_in_db
-                  |> PathGen.to_string in
+                  |> Source.export (get_db_path ()) in
         let cmd = Config.external_reader ^ " " ^ "\'" ^ src ^ "\'" in
         Printf.printf "Running \'%s\'." cmd;
         spawn cmd

@@ -6,7 +6,7 @@ type document = {
   id: int;
   name: string;
   authors: string list;
-  source: PathGen.t list;
+  source: Source.t list;
   tags: string list;
 }
 
@@ -60,7 +60,10 @@ module Json = Yojson.Basic
 
 let json_of_document (doc: document): Json.json =
   let strlst2json = List.map (fun s -> `String s) in
-  let srclst2json = List.map (fun s -> `String (PathGen.to_string s)) in
+  let srclst2json = List.map (fun s ->
+    (* We store relative paths in the database *)
+    `String (Source.export_rel s)
+  ) in
   let open Json in
   `Assoc [
     "id", `Int doc.id;
@@ -84,10 +87,10 @@ let document_of_json (json: Json.json): document =
 
   let json2strlst = List.filter_map to_string_option in
   let json2srclst = List.filter_map (fun src ->
+    (* The db contains relative paths *)
     try
       to_string_option src
-      |> Option.map PathGen.of_string
-      |> Option.map PathGen.normalize
+      |> Option.map Source.import_rel
     with PathGen.Illegal_char ->
       Printf.eprintf "Invalid path %s. Ignoring it\n"
         (to_string_option src |> Option.get);

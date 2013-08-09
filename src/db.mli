@@ -4,7 +4,7 @@ type document = {
   id: int;
   name: string;
   authors: string list;
-  source: BatPathGen.OfString.t list;
+  source: Source.t list;
   tags: string list;
 }
 
@@ -14,7 +14,7 @@ val create : unit -> t
 val add : t ->
   name: string ->
   authors: string list ->
-  source: BatPathGen.OfString.t list ->
+  source: Source.t list ->
   tags: string list ->
   document
 

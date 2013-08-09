@@ -90,14 +90,14 @@ let eval_query_elt (elt: query_elt) (doc: Db.document): float * float =
     make_search s
       (List.flatten [[doc.name];
                      doc.authors;
-                     List.map PathGen.to_string doc.source;
+                     List.map Source.export_rel doc.source;
                      doc.tags])
   | Title s ->
     make_search s [doc.name]
   | Author s ->
     make_search s doc.authors
   | Source s ->
-    make_search s (List.map PathGen.to_string doc.source)
+    make_search s (List.map Source.export_rel doc.source)
   | Tag s ->
     make_search s doc.tags
 
