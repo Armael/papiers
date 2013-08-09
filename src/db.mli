@@ -23,6 +23,7 @@ val update : t -> document -> unit
 val remove : t -> document -> unit
 val iter : (document -> unit) -> t -> unit
 val fold : (document -> 'b -> 'b) -> t -> 'b -> 'b
+val map : (document -> document) -> t -> unit
 val find : (document -> bool) -> t -> document
 val find_opt : (document -> bool) -> t -> document option
 

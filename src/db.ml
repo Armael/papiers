@@ -41,6 +41,9 @@ let iter f db =
 let fold f db acc =
   IntH.fold (fun _ doc acc -> f doc acc) db acc
 
+let map f db =
+  IntH.map_inplace (fun _ doc -> f doc) db
+
 exception Found of document
 
 let find (p: document -> bool) db =
