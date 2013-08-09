@@ -4,8 +4,8 @@
 
 ## Build instructions
 
-- Install batteries, yojson and ANSITerminal (`opam install batteries yojson ANSITerminal` if you have opam)
-- Edit the `src/config.ml` if you want to change the db location (by default it is `~/.papiers.db`), or the default reader for the sources (default: `xdg-open`)
+- Install batteries, yojson, ANSITerminal, uri and camlzip (`opam install batteries yojson ANSITerminal uri camlzip` if you have opam)
+- Edit the `src/config.ml` if you want to change the default reader for the sources (default: `xdg-open`)
 - Then:
 ```
 ./configure  
@@ -14,8 +14,13 @@ make && sudo make install
 
 ## How to use *Papiers*
 
-- Add documents to the database: `papiers -a ~/Papers/interesting_paper.pdf`
-- Make queries to the database: `papiers keyword1 keyword2`
+*Papiers* now works a bit like *git*: you have *papiers* repositories;
+ a repository is located in a directory, and index sources that are
+ contained in this directory.
+
+- Initialize a new repository in the current directory: `papiers init`
+- Add documents to the database: `papiers doc add ~/Papers/interesting_paper.pdf`
+- Make queries to the database: `papiers search keyword1 keyword2`
 - Type `papiers --help` to see the other possibilities
 
 A query is more or less simply a list of keywords, that are searched through the
