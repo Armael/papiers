@@ -210,7 +210,7 @@ let document (db: Db.t) action arg =
           try
             Db.remove db (Db.get db id);
             Printf.printf "Successfully removed document # %d\n" id
-          with Not_found -> Printf.printf "There is no document with id %d\n" id
+          with Not_found -> Printf.eprintf "There is no document with id %d\n" id
         )
         arg;
       `Ok ()
@@ -305,7 +305,7 @@ let open_src db id src_ids =
         Printf.printf "Running \'%s\'." cmd;
         spawn cmd
       with Invalid_argument "Index past end of list" ->
-        Printf.printf "There is no source with id %d\n" src_id
+        Printf.eprintf "There is no source with id %d\n" src_id
     ) src_ids;
     `Ok ()
   with Not_found ->
