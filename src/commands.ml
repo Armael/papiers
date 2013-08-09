@@ -92,10 +92,18 @@ let full_path_in_db (path: PathGen.t) =
 
 (* Relocate [path] to be relative to the database location *)
 let relocate (path: PathGen.t) =
-  path
-  |> full_path_in_cwd
-  |> relative_path
-  |> PathGen.normalize
+  let relocated = path
+    |> full_path_in_cwd
+    |> relative_path
+    |> PathGen.normalize
+  in
+  if PathGen.is_absolute relocated then (
+    (* [path] was not pointing to a file in the repository *)
+    Printf.eprintf "Error: %s is outside repository\n"
+      (PathGen.to_string path);
+    exit 1
+  );
+  relocated
 
 (* Pretty printing ************************************************************)
 
