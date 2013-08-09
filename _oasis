@@ -12,5 +12,5 @@ Executable papiers
   BuildTools: ocamlbuild
   MainIs:     papiers.ml
   CompiledObject: best
-  BuildDepends: batteries, yojson, ANSITerminal, cmdliner, uri
+  BuildDepends: batteries, yojson, ANSITerminal, cmdliner, uri, zip
   

@@ -303,6 +303,42 @@ let show ids =
   in
   iter_effect_tl display_doc print_newline docs
 
+(* Export *)
+let export zipname ids =
+  let db = load_db () in
+  let exported_db =
+    if ids = [] then
+      db
+    else begin
+      let new_db = Db.create () in
+      List.iter (fun id ->
+        let doc = Db.get db id in
+        Db.add new_db
+          ~name:doc.Db.name
+          ~authors:doc.Db.authors
+          ~source:doc.Db.source
+          ~tags:doc.Db.tags
+        |> ignore
+      ) ids;
+      new_db
+    end in
+  
+  let zip_out = Zip.open_out zipname in
+  Zip.add_entry (Db.to_string exported_db) zip_out Db.out_name;
+  Db.iter (fun doc ->
+    List.iter (fun src ->
+      match src with
+      | Source.File path ->
+        let full_path = Source.export (get_db_path ()) src in
+        let rel_path = PathGen.to_string path in
+        (try
+           Zip.copy_file_to_entry full_path zip_out rel_path
+         with Sys_error e -> Printf.eprintf "%s\n" e)
+      | _ -> ()
+    ) doc.Db.source
+  ) exported_db;
+  Zip.close_out zip_out
+
 (* Open *)
 let open_src id src_ids =
   let db = load_db () in

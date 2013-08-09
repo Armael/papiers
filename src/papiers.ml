@@ -146,6 +146,25 @@ let show_cmd =
   Term.(pure show $ ids),
   Term.info "show" ~doc ~man
 
+let export_cmd =
+  let zipname =
+    let doc = "The name of the destination zip archive" in
+    Arg.(required & pos 0 (some string) None & info [] ~docv:"DEST_ZIP" ~doc)
+  in
+  let ids =
+    let doc = "Ids of the documents to export" in
+    Arg.(value & pos_right 0 int [] & info [] ~docv:"DOC_IDs" ~doc)
+  in
+  let doc = "Export documents of the database to a zip archive" in
+  let man = [
+    `S "DESCRIPTION";
+    `P "Export documents of ids $(b,DOC_IDs) to a zip archive."; `Noblank;
+    `P "If $(b,DOC_IDs) is empty, export $(i,all) the documents of the database";
+    `P "The exported zip archive contains a papiers repository: it can be extracted into a directory, and be a new papiers repository that only contains the exported documents";
+  ] in
+  Term.(pure export $ zipname $ ids),
+  Term.info "export" ~doc ~man
+
 let search_cmd =
   let max_results =
     let doc = "Maximum number of results to display" in
@@ -224,6 +243,7 @@ let cmds = [initialize_cmd;
             source_cmd;
             tag_cmd;
             show_cmd;
+            export_cmd;
             search_cmd;
             open_cmd]
 
