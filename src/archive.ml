@@ -12,9 +12,21 @@ let export (db: Db.t) (db_path: PathGen.t) (zipname: string) =
       | Source.File path ->
         let full_path = Source.export db_path src in
         let rel_path = PathGen.to_string path in
+
         (try
-           Zip.copy_file_to_entry full_path zip_out rel_path
-         with Sys_error e -> Printf.eprintf "%s\n" e)
+           if Sys.is_directory full_path then
+             let files = Prelude.explore_directory full_path in
+             List.iter (fun file ->
+               Zip.copy_file_to_entry (Filename.concat full_path file)
+                 zip_out (Filename.concat rel_path file)
+             ) files
+           else
+             Zip.copy_file_to_entry full_path zip_out rel_path
+
+         with Sys_error e ->
+           Printf.eprintf "Error copying %s: %s. Continue.\n"
+             full_path e)
+
       | _ -> ()
     ) doc.Db.source
   ) db;

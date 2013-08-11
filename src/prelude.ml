@@ -31,3 +31,24 @@ let filteri (p: int -> 'a -> bool) (l: 'a list) =
      if p id x then x::acc else acc)
   ) (0, []) l
   |> snd |> List.rev
+
+(* Return the list of all the files in a given directory, with
+   their relative path into the directory. *)
+let explore_directory (dir: string) =
+  let (^/) = Filename.concat in
+  let root = dir in
+
+  let rec aux prefix = 
+    let files = ref [] in
+    begin try
+      let content = Sys.readdir (root ^/ prefix) in
+      Array.iter (fun it ->
+        let it = prefix ^/ it in
+        if Sys.is_directory (root ^/ it) then
+          files := (aux it) @ !files
+        else
+          files := it :: !files
+      ) content;
+      with Sys_error _ -> () end;
+    !files in
+  aux ""
