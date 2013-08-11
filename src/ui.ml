@@ -64,7 +64,9 @@ let query_tags () =
   |> List.map String.strip
 
 let query_doc_infos () =
-  query_title (),
-  query_authors (),
-  query_tags ()
+  let title = query_title ()
+  and authors = query_authors ()
+  and tags = query_tags () in
+
+  title, authors, tags
 
