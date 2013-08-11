@@ -1,4 +1,5 @@
 open Batteries
+open Prelude
 
 module PathGen = BatPathGen.OfString
 module Glob = BatGlobal
@@ -29,104 +30,11 @@ let get_db_name () =
 let load_db () = Db.load (get_db_name ())
 let store_db db = Db.store (get_db_name ()) db
 
-(* Utility functions **********************************************************)
-
-let iter_effect_tl (f: 'a -> unit) (effect: unit -> unit) (l: 'a list) =
-  match l with
-  | [] -> ()
-  | [x] -> f x
-  | x::xs -> f x; List.iter (fun x -> effect (); f x) xs
-
-let iteri_effects (f: int -> 'a -> unit)
-    ~(before: unit -> unit)
-    ~(between: unit -> unit)
-    (l: 'a list) =
-  match l with
-  | [] -> ()
-  | [x] -> before (); f 0 x
-  | x::xs -> before (); f 0 x; List.iteri (fun i x -> between (); f (i+1) x) xs
-
-let spawn (cmd: string) =
-  if Unix.fork () = 0 then (
-    Unix.setsid () |> ignore;
-    Unix.execv
-      "/bin/sh"
-      [| "/bin/sh"; "-c"; cmd |]
-  )
-
-let filteri (p: int -> 'a -> bool) (l: 'a list) =
-  List.fold_left (fun (id, acc) x ->
-    (id + 1,
-     if p id x then x::acc else acc)
-  ) (0, []) l
-  |> snd |> List.rev
-
-(* Pretty printing ************************************************************)
-
-module A = ANSITerminal
-module C = Config.Colors
-
-let colored = Config.colored_output && Unix.isatty Unix.stdout
-
-let print_color style =
-  if colored then
-    A.print_string style
-  else
-    print_string
-
-let display_doc (doc: Db.document) =
-  let open Db in
-
-  if colored then
-    A.printf C.title "# %d : %s\n" doc.id doc.name
-  else
-    Printf.printf "# %d : %s\n" doc.id doc.name;
-
-  if doc.authors <> [] then (
-    print_newline ();
-    print_color C.authors "Authors : ";
-  );
-  iter_effect_tl print_string (fun () -> print_string ", ") doc.authors;
-
-  iteri_effects
-    ~before:(fun () -> print_newline (); print_color C.sources "Source  :")
-    ~between:(fun () -> print_newline (); print_string "         ")
-    (fun src_id src ->
-      Printf.printf " #%d: " src_id;
-      print_string (Source.export (get_db_path ()) src);
-    ) doc.source;
-
-  if doc.tags <> [] then (
-    print_newline ();
-    print_color C.tags "Tags    : ";
-  );
-  iter_effect_tl print_string (fun () -> print_string ", ") doc.tags;
-  print_newline ()
-
 (* Papiers commands (add/remove/modify documents,…) ***************************)
 
 let str_of_action = function
   | `Add -> "Add"
   | `Del -> "Del"
-
-let query_doc_infos () =
-  print_string "Title: ";
-  let title = read_line () |> String.strip in
-
-  print_string "Authors (comma separated): ";
-  let authors =
-    read_line ()
-    |> String.nsplit ~by:","
-    |> List.map String.strip
-  in
-
-  print_string "Tags (comma separated): ";
-  let tags =
-    read_line ()
-    |> String.nsplit ~by:","
-    |> List.map String.strip
-  in
-  (title, authors, tags)
 
 let check_sources (srcs: string list) =
   try let nexist = List.find (neg Sys.file_exists) srcs in
@@ -161,7 +69,7 @@ let search short max_res query =
       iter_effect_tl (fun doc -> print_int doc.Db.id)
         (fun () -> print_char ' ')
     else
-      iter_effect_tl display_doc print_newline
+      iter_effect_tl Ui.display_doc print_newline
   in
   
   (max_res |> Option.map (flip List.take ranked_docs))
@@ -196,10 +104,10 @@ let document action arg =
       iter_effect_tl
         (fun src ->
           if not (source_already_exists src) then
-            let (name, authors, tags) = query_doc_infos () in
+            let (name, authors, tags) = Ui.query_doc_infos () in
             let doc = Db.add db ~name ~source:[src] ~authors ~tags in
             print_string "\nSuccessfully added:\n";
-            display_doc doc
+            Ui.display_doc doc
         )
         print_newline
         sources;
@@ -301,7 +209,7 @@ let show ids =
     else
       List.filter_map maybe_get ids
   in
-  iter_effect_tl display_doc print_newline docs
+  iter_effect_tl Ui.display_doc print_newline docs
 
 (* Export *)
 let export zipname ids =
@@ -322,22 +230,8 @@ let export zipname ids =
       ) ids;
       new_db
     end in
-  
-  let zip_out = Zip.open_out zipname in
-  Zip.add_entry (Db.to_string exported_db) zip_out Db.out_name;
-  Db.iter (fun doc ->
-    List.iter (fun src ->
-      match src with
-      | Source.File path ->
-        let full_path = Source.export (get_db_path ()) src in
-        let rel_path = PathGen.to_string path in
-        (try
-           Zip.copy_file_to_entry full_path zip_out rel_path
-         with Sys_error e -> Printf.eprintf "%s\n" e)
-      | _ -> ()
-    ) doc.Db.source
-  ) exported_db;
-  Zip.close_out zip_out
+
+  Archive.export exported_db (get_db_path ()) zipname
 
 (* Open *)
 let open_src id src_ids =
