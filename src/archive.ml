@@ -10,7 +10,7 @@ let export (db: Db.t) (db_path: PathGen.t) (zipname: string) =
     List.iter (fun src ->
       match src with
       | Source.File path ->
-        let full_path = Source.export (get_db_path ()) src in
+        let full_path = Source.export db_path src in
         let rel_path = PathGen.to_string path in
         (try
            Zip.copy_file_to_entry full_path zip_out rel_path

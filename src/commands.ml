@@ -69,7 +69,7 @@ let search short max_res query =
       iter_effect_tl (fun doc -> print_int doc.Db.id)
         (fun () -> print_char ' ')
     else
-      iter_effect_tl Ui.display_doc print_newline
+      iter_effect_tl (Ui.display_doc (get_db_path ())) print_newline
   in
   
   (max_res |> Option.map (flip List.take ranked_docs))
@@ -107,7 +107,7 @@ let document action arg =
             let (name, authors, tags) = Ui.query_doc_infos () in
             let doc = Db.add db ~name ~source:[src] ~authors ~tags in
             print_string "\nSuccessfully added:\n";
-            Ui.display_doc doc
+            Ui.display_doc (get_db_path ()) doc
         )
         print_newline
         sources;
@@ -209,7 +209,7 @@ let show ids =
     else
       List.filter_map maybe_get ids
   in
-  iter_effect_tl Ui.display_doc print_newline docs
+  iter_effect_tl (Ui.display_doc (get_db_path ())) print_newline docs
 
 (* Export *)
 let export zipname ids =

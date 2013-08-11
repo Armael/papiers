@@ -16,7 +16,7 @@ let print_color style =
   else
     print_string
 
-let display_doc (doc: Db.document) =
+let display_doc (db_path: PathGen.t) (doc: Db.document) =
   let open Db in
 
   if colored then
@@ -35,7 +35,7 @@ let display_doc (doc: Db.document) =
     ~between:(fun () -> print_newline (); print_string "         ")
     (fun src_id src ->
       Printf.printf " #%d: " src_id;
-      print_string (Source.export (get_db_path ()) src);
+      print_string (Source.export db_path src);
     ) doc.source;
 
   if doc.tags <> [] then (
