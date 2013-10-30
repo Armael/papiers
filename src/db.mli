@@ -26,9 +26,13 @@ val fold : (document -> 'b -> 'b) -> t -> 'b -> 'b
 val map : (document -> document) -> t -> unit
 val find : (document -> bool) -> t -> document
 val find_opt : (document -> bool) -> t -> document option
+val size : t -> int
+
+val copy : t -> t
 
 val load : string -> t
 val store : string -> t -> unit
+val from_string : string -> t
 val to_string : t -> string
 
 val out_name : string

@@ -55,6 +55,12 @@ let find (p: document -> bool) db =
 let find_opt (p: document -> bool) db =
   try Some (find p db) with Not_found -> None
 
+let size db =
+  IntH.length db
+
+let copy db =
+  IntH.copy db
+
 (* JSON backend: the database is stored as a JSON object *)
 
 module Json = Yojson.Basic
@@ -121,6 +127,9 @@ let load (file: string) =
 
 let store (file: string) (db: t) =
   db |> json_of_t |> Json.to_file file
+
+let from_string (content: string) =
+  Json.from_string content |> t_of_json
 
 let to_string (db: t) =
   db |> json_of_t |> Json.to_string
