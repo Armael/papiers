@@ -5,8 +5,8 @@ let colored_output = true
 module Colors = struct
   open ANSITerminal
 
-  let title = [Bold; Underlined]
+  let title = [Bold]
   let authors = [green]
   let sources = [red]
-  let tags = [blue]
+  let tags = [cyan]
 end
