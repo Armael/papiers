@@ -165,6 +165,20 @@ let export_cmd =
   Term.(pure export $ zipname $ ids),
   Term.info "export" ~doc ~man
 
+let import_cmd =
+  let zipname =
+    let doc = "The name of the zip archive to import" in
+    Arg.(required & pos 0 (some string) None & info [] ~docv:"SRC_ZIP" ~doc)
+  in
+  let doc = "Import a zip archive previously obtained via $(b,export)" in
+  let man = [
+    `S "DESCRIPTION";
+    `P "Import documents from a zip archive.";
+    `P "The zip archive to import can be obtained thanks to the $(b,export) command";
+  ] in
+  Term.(pure import $ zipname),
+  Term.info "import" ~doc ~man
+
 let search_cmd =
   let max_results =
     let doc = "Maximum number of results to display" in
@@ -244,6 +258,7 @@ let cmds = [initialize_cmd;
             tag_cmd;
             show_cmd;
             export_cmd;
+            import_cmd;
             search_cmd;
             open_cmd]
 

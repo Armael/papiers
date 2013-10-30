@@ -233,6 +233,14 @@ let export zipname ids =
 
   Archive.export exported_db (get_db_path ()) zipname
 
+(* Import *)
+let import zipname =
+  let db = load_db () in
+  let db_path = get_db_path () in
+  let to_import: Db.t = Archive.import_sources db_path zipname in
+  Archive.import_db db_path db to_import;
+  store_db db
+
 (* Open *)
 let open_src id src_ids =
   let db = load_db () in
