@@ -52,11 +52,18 @@ let full_path_in_db (db_path: PathGen.t) (path: PathGen.t) =
 (******************************************************************************)
 
 (* Import a source string *)
-let import (db_path: PathGen.t) (src: string) =
+let import ?(check_file_exists = false) (db_path: PathGen.t) (src: string) =
   let uri = Uri.of_string src in
   match Uri.scheme uri with
   | None | Some "file" ->
     let path = Uri.path uri |> PathGen.of_string in
+
+    if check_file_exists then (
+      let full_path = full_path_in_cwd path |> PathGen.to_string in
+      if not (Sys.file_exists full_path) then
+        failwith (Printf.sprintf "%s doesn't exist" full_path)
+    );
+
     File (relocate db_path path)
   | _ ->
     Other src

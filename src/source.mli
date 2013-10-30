@@ -2,7 +2,7 @@ type t =
 | File of BatPathGen.OfString.t
 | Other of string
 
-val import : BatPathGen.OfString.t -> string -> t
+val import : ?check_file_exists:bool -> BatPathGen.OfString.t -> string -> t
 val export : BatPathGen.OfString.t -> t -> string
 
 (* [import_rel ~src] is equivalent to
