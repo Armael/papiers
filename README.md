@@ -19,7 +19,7 @@ make && sudo make install
  contained in this directory.
 
 - Initialize a new repository in the current directory: `papiers init`
-- Add documents to the database: `papiers doc add ~/Papers/interesting_paper.pdf`
+- Add documents to the database: `papiers doc add interesting_paper.pdf`
 - Make queries to the database: `papiers search keyword1 keyword2`
 - Type `papiers --help` to see the other possibilities
 
