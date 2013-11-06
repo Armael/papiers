@@ -4,7 +4,7 @@
 
 ## Build instructions
 
-- Install batteries, yojson, ANSITerminal, uri and camlzip (`opam install batteries yojson ANSITerminal uri camlzip cmdliner` if you have opam)
+- Install batteries, yojson, ANSITerminal, uri, camlzip and cmdliner (`opam install batteries yojson ANSITerminal uri camlzip cmdliner` if you have opam)
 - Edit the `src/config.ml` if you want to change the default reader for the sources (default: `xdg-open`), or the colors.
 - Then:
 ```
