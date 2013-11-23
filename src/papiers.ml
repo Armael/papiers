@@ -146,6 +146,16 @@ let show_cmd =
   Term.(pure show $ ids),
   Term.info "show" ~doc ~man
 
+let status_cmd =
+  let doc = "Show files not archived by papiers." in
+  let man = [
+    `S "DESCRIPTION";
+    `P "Display the names of the files which are not archived by papiers";
+    `P "Just use \"papiers status\".";
+  ] in
+  Term.(pure status $ pure ()),
+  Term.info "status" ~doc ~man
+
 let export_cmd =
   let zipname =
     let doc = "The name of the destination zip archive" in
@@ -257,6 +267,7 @@ let cmds = [initialize_cmd;
             source_cmd;
             tag_cmd;
             show_cmd;
+            status_cmd;
             export_cmd;
             import_cmd;
             search_cmd;

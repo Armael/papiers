@@ -9,4 +9,5 @@ module Colors = struct
   let authors = [green]
   let sources = [red]
   let tags = [cyan]
+  let files = [red]
 end
