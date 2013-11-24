@@ -136,6 +136,25 @@ let title_cmd =
   Term.(ret (pure update_title $ action $ doc_id $ new_title)),
   Term.info "title" ~doc ~man
 
+let rename_cmd =
+  let id =
+    let doc = "Id of the document" in
+    Arg.(required & pos 0 (some int) None & info [] ~docv:"DOC_ID" ~doc)
+  in
+  let src_id =
+    let doc = "Ids of the sources to rename" in
+    Arg.(value & pos_right 0 int [] & info [] ~docv:"SRC_IDs" ~doc)
+  in
+
+  let doc = "Update sources filenames to match the document title" in
+  let man = [
+    `S "DESCRIPTION";
+    `P "Rename some of the source filenames according to the title of the document";
+    `P "Rename the source filenames of ids $(b,SRC_IDs) of the document of id $(b,DOC_ID). If $(b,SRC_IDs) is empty, $(i,all) the sources are renamed."
+  ] in
+  Term.(ret (pure rename $ id $ src_id)),
+  Term.info "rename" ~doc ~man
+
 let show_cmd =
   let ids =
     let doc = "Ids of the documents to show" in
@@ -270,6 +289,7 @@ let cmds = [initialize_cmd;
             title_cmd;
             source_cmd;
             tag_cmd;
+            rename_cmd;
             show_cmd;
             status_cmd;
             export_cmd;

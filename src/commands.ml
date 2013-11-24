@@ -202,6 +202,48 @@ let update_title _ doc_id new_title =
   with Not_found ->
     `Error (false, "There is no document with id " ^ (string_of_int doc_id))
 
+(* Rename *)
+let rename doc_id src_idx =
+  let check_idx = if src_idx = [] then const true else flip List.mem src_idx in
+  let resolve_conflict =
+    let already_used = Hashtbl.create 37 in
+    fun path ->
+      match Hashtbl.Exceptionless.find already_used path with
+      | Some i ->
+        Hashtbl.replace already_used path (i+1);
+        let (parent, base, ext) = path in
+        (parent, base ^ "_" ^ string_of_int (i+1), ext)
+      | None -> Hashtbl.replace already_used path 1;
+        path
+  in
+
+  let db = load_db () in
+  let doc = Db.get db doc_id in
+
+  let source =
+    List.mapi (fun i src ->
+      match src, check_idx i with
+      | Source.File path, true ->
+        let newpath = PathGen.map
+          (resolve_conflict % Tuple3.map2 (const doc.Db.name))
+          path
+        in
+        let before = PathGen.to_string path in
+        let after = PathGen.to_string newpath in
+        (* Safety check *)
+        if Sys.file_exists after then
+          failwith (Printf.sprintf
+                      "Cannot rename %s to %s: this file already exists"
+                      before after);
+        Unix.rename before after;
+        print_string (before ^ " -> " ^ after ^ "\n");
+        Source.File newpath
+      | _ -> src
+    ) doc.Db.source
+  in
+  Db.update db { doc with Db.source = source };
+  `Ok (store_db db)
+
 (* Show *)
 let show ids =
   let db = load_db () in
