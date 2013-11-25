@@ -52,3 +52,20 @@ let explore_directory (dir: string) =
       with Sys_error _ -> () end;
     !files in
   aux ""
+
+(* Tries to create a directory. In case of failure, do nothing *)
+let try_mkdir name perm =
+  try Unix.mkdir name perm with
+    Unix.Unix_error _ -> ()
+
+(* Creates all the folders needed to write in path.
+   Similar to a 'mkdir -p'. *)
+let rec mkpath path =
+  let perm = 0o755 in
+  if not (Sys.file_exists path) then (
+    mkpath (Filename.dirname path);
+    try_mkdir path perm
+  )
+
+let mkfilepath filename =
+  mkpath (Filename.dirname filename)

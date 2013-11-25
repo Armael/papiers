@@ -226,6 +226,7 @@ let import_sources (db_path: PathGen.t) (zipname: string): Db.t =
     |> Tuple2.map
         (* No file conflict *)
         (Enum.iter (fun (entry, _, filename) ->
+          mkfilepath filename;
           Zip.copy_entry_to_file zip_in entry filename)
         )
         (* Deal with the file conflict *)
@@ -238,15 +239,18 @@ let import_sources (db_path: PathGen.t) (zipname: string): Db.t =
             match WhatDo.file_already_exists filename with
             | `Rename new_filename ->
               let full_new_filename = PathGen.concat db_path new_filename in
+              let full_new_filename_s = PathGen.to_string full_new_filename in
+              mkfilepath full_new_filename_s;
               Zip.copy_entry_to_file
                 zip_in
                 entry
-                (PathGen.to_string full_new_filename);
+                full_new_filename_s;
               sources_to_rename := (Source.File filename,
                                     Source.File new_filename)
               ::!sources_to_rename
 
             | `Overwrite ->
+              mkfilepath full_filename_s;
               Zip.copy_entry_to_file zip_in entry full_filename_s
 
             | `Skip ->
