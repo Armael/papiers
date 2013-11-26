@@ -1,3 +1,8 @@
+(******************************************************************************)
+(*   Copyright (c) 2013 Armaël Guéneau.                                       *)
+(*   See the file LICENSE for copying permission.                             *)
+(******************************************************************************)
+
 let external_reader = "xdg-open"
 
 let colored_output = true

@@ -1,9 +1,16 @@
+(******************************************************************************)
+(*   Copyright (c) 2013 Armaël Guéneau.                                       *)
+(*   See the file LICENSE for copying permission.                             *)
+(******************************************************************************)
+
 open Batteries
 open Prelude
 
 module PathGen = BatPathGen.OfString
 
-(* Pretty printing ************************************************************)
+(******************************************************************************)
+(* Pretty printing :                                                          *)
+(******************************************************************************)
 
 module A = ANSITerminal
 module C = Config.Colors
@@ -58,7 +65,9 @@ let display_doc (db_path: PathGen.t) (doc: Db.document) =
   iter_effect_tl print_string (fun () -> print_string ", ") doc.tags;
   print_newline ()
 
-(* Query informations *********************************************************)
+(******************************************************************************)
+(* Query informations :                                                       *)
+(******************************************************************************)
 
 let query_title () =
   print_string "Title: ";

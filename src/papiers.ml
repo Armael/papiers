@@ -1,15 +1,17 @@
+(******************************************************************************)
+(*   Copyright (c) 2013 Armaël Guéneau.                                       *)
+(*   See the file LICENSE for copying permission.                             *)
+(******************************************************************************)
+
 open Batteries
 open Cmdliner
-
-(* Implementation of the commands *********************************************)
-
 open Commands
 
-(* Command line interface *****************************************************)
+(******************************************************************************)
+(* Custom converters :                                                        *)
+(******************************************************************************)
 
-(* Custom converters ******************)
-
-(* action converter *)
+(* Action converter *)
 let action_conv =
   let parse = function
     | "add" -> `Ok `Add
@@ -21,7 +23,9 @@ let singleton_conv x str_of_x error_msg =
   let parse y = if x = y then `Ok x else `Error (error_msg y) in
   parse, fun ppf p -> Format.fprintf ppf "%s" (str_of_x x)
 
-(* Commands ***************************)
+(*****************************************************************************)
+(* Commands :                                                                *)
+(*****************************************************************************)
 
 let initialize_cmd =
   let directory =
