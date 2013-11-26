@@ -1,6 +1,12 @@
-open Batteries
+(******************************************************************************)
+(*   Copyright (c) 2013 Armaël Guéneau.                                       *)
+(*   See the file LICENSE for copying permission.                             *)
+(*                                                                            *)
+(*   prelude.ml : Utility functions.                                          *)
+(*                                                                            *)
+(******************************************************************************)
 
-(* Utility functions **********************************************************)
+open Batteries
 
 let iter_effect_tl (f: 'a -> unit) (effect: unit -> unit) (l: 'a list) =
   match l with

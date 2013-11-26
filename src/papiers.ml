@@ -1,15 +1,17 @@
+(******************************************************************************)
+(*   Copyright (c) 2013 Armaël Guéneau.                                       *)
+(*   See the file LICENSE for copying permission.                             *)
+(******************************************************************************)
+
 open Batteries
 open Cmdliner
-
-(* Implementation of the commands *********************************************)
-
 open Commands
 
-(* Command line interface *****************************************************)
+(******************************************************************************)
+(* Custom converters :                                                        *)
+(******************************************************************************)
 
-(* Custom converters ******************)
-
-(* action converter *)
+(* Action converter *)
 let action_conv =
   let parse = function
     | "add" -> `Ok `Add
@@ -21,7 +23,9 @@ let singleton_conv x str_of_x error_msg =
   let parse y = if x = y then `Ok x else `Error (error_msg y) in
   parse, fun ppf p -> Format.fprintf ppf "%s" (str_of_x x)
 
-(* Commands ***************************)
+(*****************************************************************************)
+(* Commands :                                                                *)
+(*****************************************************************************)
 
 let initialize_cmd =
   let directory =
@@ -146,6 +150,16 @@ let show_cmd =
   Term.(pure show $ ids),
   Term.info "show" ~doc ~man
 
+let status_cmd =
+  let doc = "Show files not archived by papiers." in
+  let man = [
+    `S "DESCRIPTION";
+    `P "Display the names of the files which are not archived by papiers";
+    `P "Just use \"papiers status\".";
+  ] in
+  Term.(pure status $ pure ()),
+  Term.info "status" ~doc ~man
+
 let export_cmd =
   let zipname =
     let doc = "The name of the destination zip archive" in
@@ -257,6 +271,7 @@ let cmds = [initialize_cmd;
             source_cmd;
             tag_cmd;
             show_cmd;
+            status_cmd;
             export_cmd;
             import_cmd;
             search_cmd;

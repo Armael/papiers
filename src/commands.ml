@@ -1,3 +1,8 @@
+(******************************************************************************)
+(*   Copyright (c) 2013 Armaël Guéneau.                                       *)
+(*   See the file LICENSE for copying permission.                             *)
+(******************************************************************************)
+
 open Batteries
 open Prelude
 
@@ -30,7 +35,9 @@ let get_db_name () =
 let load_db () = Db.load (get_db_name ())
 let store_db db = Db.store (get_db_name ()) db
 
-(* Papiers commands (add/remove/modify documents,…) ***************************)
+(******************************************************************************)
+(* Papiers commands (add/remove/modify documents,…) :                         *)
+(******************************************************************************)
 
 let str_of_action = function
   | `Add -> "Add"
@@ -210,6 +217,38 @@ let show ids =
       List.filter_map maybe_get ids
   in
   iter_effect_tl (Ui.display_doc (get_db_path ())) print_newline docs
+
+(* Status *)
+let status () =
+  let db = load_db ()
+  and path_db = get_db_path () in
+  let files = explore_directory (PathGen.to_string path_db) 
+              |> List.map (PathGen.(normalize % of_string)) in
+  let sources =  Db.fold
+                 (fun doc acc ->
+                    List.filter_map
+                      (fun source -> match source with
+                        | Source.File s -> Some s
+                        | Source.Other s -> None)
+                      doc.Db.source
+                    @ acc)
+                 db [] in
+  let dsources, fsources = List.partition (Sys.is_directory % PathGen.to_string) sources in
+  let rec diff files sources = match files, sources with
+    | [], _ -> []
+    | _, [] -> files
+    | f :: qf, s :: qs ->
+      if f = s then
+        diff qf qs
+      else if List.exists (fun ds -> PathGen.belongs ds f) dsources then
+        diff qf sources
+      else if f < s then
+        f :: (diff qf sources)
+      else
+        diff files qs
+  in
+  let res = diff (List.sort compare files) (List.sort compare fsources) in
+  Ui.display_files res
 
 (* Export *)
 let export zipname ids =

@@ -1,3 +1,8 @@
+(******************************************************************************)
+(*   Copyright (c) 2013 Armaël Guéneau.                                       *)
+(*   See the file LICENSE for copying permission.                             *)
+(******************************************************************************)
+
 open Batteries
 
 module PathGen = BatPathGen.OfString
@@ -6,7 +11,9 @@ type t =
 | File of PathGen.t
 | Other of string
 
-(* Path manipulation **********************************************************)
+(*****************************************************************************)
+(* Path manipulations :                                                      *)
+(*****************************************************************************)
 
 (* Take [path], relative to the current working directory, and output
    the absolute path *)

@@ -1,3 +1,8 @@
+(******************************************************************************)
+(*   Copyright (c) 2013 Armaël Guéneau.                                       *)
+(*   See the file LICENSE for copying permission.                             *)
+(******************************************************************************)
+
 type query_elt =
 | Id of int
 | String of string

@@ -1,3 +1,8 @@
+(******************************************************************************)
+(*   Copyright (c) 2013 Armaël Guéneau.                                       *)
+(*   See the file LICENSE for copying permission.                             *)
+(******************************************************************************)
+
 type t =
 | File of BatPathGen.OfString.t
 | Other of string

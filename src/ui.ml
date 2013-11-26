@@ -1,9 +1,16 @@
+(******************************************************************************)
+(*   Copyright (c) 2013 Armaël Guéneau.                                       *)
+(*   See the file LICENSE for copying permission.                             *)
+(******************************************************************************)
+
 open Batteries
 open Prelude
 
 module PathGen = BatPathGen.OfString
 
-(* Pretty printing ************************************************************)
+(******************************************************************************)
+(* Pretty printing :                                                          *)
+(******************************************************************************)
 
 module A = ANSITerminal
 module C = Config.Colors
@@ -15,6 +22,19 @@ let print_color style =
     A.print_string style
   else
     print_string
+
+let display_files (files: PathGen.t list) =
+  print_string "Files not archived:";
+  print_newline ();
+  print_string "(Use \"papiers doc add <file>...\" to archive them.)";
+  print_newline ();
+  List.iter (fun path ->
+               let spath = PathGen.name path in
+               (* Do not show hidden files who are theorically not papers : *)
+               if spath.[0] != '.' then
+                 (print_color C.files (PathGen.to_string path);
+                  print_newline ()))
+            files
 
 let display_doc (db_path: PathGen.t) (doc: Db.document) =
   let open Db in
@@ -45,7 +65,9 @@ let display_doc (db_path: PathGen.t) (doc: Db.document) =
   iter_effect_tl print_string (fun () -> print_string ", ") doc.tags;
   print_newline ()
 
-(* Query informations *********************************************************)
+(******************************************************************************)
+(* Query informations :                                                       *)
+(******************************************************************************)
 
 let query_title () =
   print_string "Title: ";
