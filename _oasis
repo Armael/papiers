@@ -4,7 +4,7 @@ Version:     0.1
 Synopsis:    A tool to index your articles/books/... and quickly search
   through them
 Authors:     Armaël Guéneau
-License:     BSD3
+License:     MIT
 Plugins:     DevFiles (0.3)
 
 Executable papiers
