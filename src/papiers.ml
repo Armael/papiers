@@ -297,8 +297,11 @@ let cmds = [initialize_cmd;
             search_cmd;
             open_cmd]
 
-let () = 
-  let res = Term.eval_choice default_cmd cmds in
-  match res with
-  | `Error _ -> exit 1
-  | _ -> exit 0
+let () =
+  let display_err msg = print_endline ("Error: " ^ msg) in
+  try
+    let res = Term.eval_choice default_cmd cmds in
+    match res with
+    | `Error _ -> exit 1
+    | _ -> exit 0
+  with Failure msg -> display_err msg; exit 1
