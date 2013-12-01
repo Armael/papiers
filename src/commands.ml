@@ -275,21 +275,17 @@ let status () =
                       doc.Db.source
                     @ acc)
                  db [] in
-  let dsources, fsources = List.partition (Sys.is_directory % PathGen.to_string) sources in
-  let rec diff files sources = match files, sources with
-    | [], _ -> []
-    | _, [] -> files
-    | f :: qf, s :: qs ->
-      if f = s then
-        diff qf qs
-      else if List.exists (fun ds -> PathGen.belongs ds f) dsources then
-        diff qf sources
-      else if f < s then
-        f :: (diff qf sources)
-      else
-        diff files qs
+
+  let dsources, fsources =
+    List.enum sources
+    |> Enum.partition (Sys.is_directory % PathGen.to_string)
+    |> Tuple2.map List.of_enum (Hashtbl.of_enum % Enum.map (fun x -> x, ()))
   in
-  let res = diff (List.sort compare files) (List.sort compare fsources) in
+
+  let res = List.filter (fun f -> not (
+    Hashtbl.mem fsources f
+    || List.exists (fun ds -> PathGen.belongs ds f) dsources
+  )) files in
   Ui.display_files res
 
 (* Export *)
