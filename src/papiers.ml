@@ -115,7 +115,7 @@ let title_cmd =
   let action =
     (* There is only one hardcodded action for now: update *)
     let doc = "What to do: $(b,update)" in
-    Arg.(required & 
+    Arg.(required &
          pos 0 (some (singleton_conv "update" identity ((^) "Unknown action "))) None &
          info [] ~docv:"ACTION" ~doc)
   in

@@ -49,7 +49,7 @@ let check_sources (srcs: string list) =
   with Not_found -> `Ok
 
 let check_ids (ids: string list) =
-  try let nint = List.find (fun s -> 
+  try let nint = List.find (fun s ->
     try int_of_string s |> ignore; false with
       Failure "int_of_string" -> true) ids in
       `Error (nint ^ " is not a valid id")
@@ -78,7 +78,7 @@ let search short max_res query =
     else
       iter_effect_tl (Ui.display_doc (get_db_path ())) print_newline
   in
-  
+
   (max_res |> Option.map (flip List.take ranked_docs))
   |? ranked_docs
   |> display
@@ -168,11 +168,11 @@ let source action doc_id arg =
     `Error (false, "There is no document with id " ^ (string_of_int doc_id))
 
 (* Tag *)
-let tag action doc_id arg = 
+let tag action doc_id arg =
   let db = load_db () in
   try
     let doc = Db.get db doc_id in
-    
+
     begin match action with
     | `Add ->
       Db.update db { doc with Db.tags = List.append doc.Db.tags arg };
@@ -196,7 +196,7 @@ let update_title _ doc_id new_title =
   in
 
   try
-    let doc = Db.get db doc_id in    
+    let doc = Db.get db doc_id in
     Db.update db { doc with Db.name = title };
     `Ok (store_db db)
   with Not_found ->
@@ -264,16 +264,16 @@ let show ids =
 let status () =
   let db = load_db ()
   and path_db = get_db_path () in
-  let files = explore_directory (PathGen.to_string path_db) 
+  let files = explore_directory (PathGen.to_string path_db)
               |> List.map (PathGen.(normalize % of_string)) in
   let sources =  Db.fold
                  (fun doc acc ->
                     List.filter_map
-                      (fun source -> match source with
-                        | Source.File s -> Some s
-                        | Source.Other s -> None)
+                      (function
+                      | Source.File s -> Some s
+                      | Source.Other s -> None)
                       doc.Db.source
-                    @ acc)
+                   @ acc)
                  db [] in
 
   let dsources, fsources =
