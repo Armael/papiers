@@ -224,8 +224,9 @@ let rename doc_id src_idx =
     List.mapi (fun i src ->
       match src, check_idx i with
       | Source.File path, true ->
+        let newname = Config.rename doc.Db.name doc.Db.authors in
         let newpath = PathGen.map
-          (resolve_conflict % Tuple3.map2 (const doc.Db.name))
+          (resolve_conflict % Tuple3.map2 (const newname))
           path
         in
         let before = PathGen.to_string path in
