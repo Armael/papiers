@@ -21,33 +21,33 @@ module IntH = Hashtbl.Make (struct
   let hash = Hashtbl.hash
 end)
 
-type t = document IntH.t
+type t = { table: document IntH.t; mutable fresh_id: int }
 
-let create () : t = IntH.create 34
+let create () : t = { table = IntH.create 34; fresh_id = 0 }
 
 let add db ~name ~authors ~source ~tags =
-  let new_id = IntH.length db in
-  let doc = { id = new_id; authors; name; source; tags } in
-  IntH.replace db new_id doc;
+  let doc = { id = db.fresh_id; authors; name; source; tags } in
+  IntH.replace db.table db.fresh_id doc;
+  db.fresh_id <- db.fresh_id + 1;
   doc
 
 let get db id =
-  IntH.find db id
+  IntH.find db.table id
 
 let update db doc =
-  IntH.replace db doc.id doc
+  IntH.replace db.table doc.id doc
 
 let remove db doc =
-  IntH.remove db doc.id
+  IntH.remove db.table doc.id
 
 let iter f db =
-  IntH.iter (fun _ doc -> f doc) db
+  IntH.iter (fun _ doc -> f doc) db.table
 
 let fold f db acc =
-  IntH.fold (fun _ doc acc -> f doc acc) db acc
+  IntH.fold (fun _ doc acc -> f doc acc) db.table acc
 
 let map f db =
-  IntH.map_inplace (fun _ doc -> f doc) db
+  IntH.map_inplace (fun _ doc -> f doc) db.table
 
 exception Found of document
 
@@ -61,10 +61,10 @@ let find_opt (p: document -> bool) db =
   try Some (find p db) with Not_found -> None
 
 let size db =
-  IntH.length db
+  IntH.length db.table
 
 let copy db =
-  IntH.copy db
+  { table = IntH.copy db.table; fresh_id = db.fresh_id }
 
 (* JSON backend: the database is stored as a JSON object *)
 
@@ -121,10 +121,14 @@ let document_of_json (json: Json.json): document =
 
 let t_of_json (json: Json.json): t =
   let open Json.Util in
-  json |> to_list
-       |> List.map (fun j -> let doc = document_of_json j in (doc.id, doc))
-       |> List.enum
-       |> IntH.of_enum
+  let table = 
+    json |> to_list
+         |> List.map (fun j -> let doc = document_of_json j in (doc.id, doc))
+         |> List.enum
+         |> IntH.of_enum
+  in
+  let fresh_id = (IntH.fold (fun i _ acc -> max i acc) table 0) + 1 in
+  { table; fresh_id }
 
 let load (file: string) =
   try Json.from_file file |> t_of_json
