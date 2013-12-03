@@ -8,6 +8,7 @@ open Batteries
 module PathGen = BatPathGen.OfString
 
 let (++) (a, b) (u, v) = (a +. u, b +. v)
+let ( ** ) (a, b) (u, v) = (a *. u, b *. v)
 
 let min3 a b c =
   min a (min b c)
@@ -108,4 +109,4 @@ let eval_query_elt (elt: query_elt) (doc: Db.document): float * float =
 
 let eval (q: query) (doc: Db.document): float * float =
   List.map (fun elt -> eval_query_elt elt doc) q
-  |> List.fold_left (++) (0., 0.)
+  |> List.fold_left ( ** ) (1., 1.)
