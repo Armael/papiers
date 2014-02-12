@@ -6,6 +6,7 @@
 (*                                                                            *)
 (******************************************************************************)
 
+module OText = Text
 open Batteries
 
 let iter_effect_tl (f: 'a -> unit) (effect: unit -> unit) (l: 'a list) =
@@ -75,3 +76,27 @@ let rec mkpath path =
 
 let mkfilepath filename =
   mkpath (Filename.dirname filename)
+
+let read_line ?prompt ?initial_text () =
+  let open Lwt in
+  let prompt = Option.map (
+    Lwt_term.text
+    %> List.singleton
+    %> React.S.const
+    %> const
+  ) prompt in
+
+  let reader = Lwt_read_line.Control.make
+    ~mode:`none
+    ~map_result:return
+    ?prompt
+    ()
+  in
+  Option.may (fun text ->
+    Lwt_read_line.Control.send_command reader
+      (Lwt_read_line.Command.Char (OText.decode text))
+  ) initial_text;
+
+  Lwt_read_line.Control.result reader
+  >|= OText.encode
+  |> Lwt_main.run

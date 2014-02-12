@@ -70,18 +70,15 @@ let display_doc (db_path: PathGen.t) (doc: Db.document) =
 (******************************************************************************)
 
 let query_title () =
-  print_string "Title: ";
-  read_line () |> String.strip
+  read_line ~prompt:"Title: " () |> String.strip
 
 let query_authors () =
-  print_string "Authors (comma separated): ";
-  read_line ()
+  read_line ~prompt:"Authors (comma separated): " ()
   |> String.nsplit ~by:","
   |> List.map String.strip
 
 let query_tags () =
-  print_string "Tags (comma separated): ";
-  read_line ()
+  read_line ~prompt:"Tags (comma separated): " ()
   |> String.nsplit ~by:","
   |> List.map String.strip
 
@@ -94,8 +91,7 @@ let query_doc_infos () =
 
 
 let query_sources (db_path: PathGen.t) =
-  print_string "Sources (comma separated): ";
-  read_line ()
+  read_line ~prompt:"Sources (comma separated): " ()
   |> String.nsplit ~by:","
   |> List.map String.strip
   |> List.map (Source.import ~check_file_exists:true db_path)

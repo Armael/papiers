@@ -1,7 +1,7 @@
 # OASIS_START
-# DO NOT EDIT (digest: a97c03038ce5bfc80192f1c4327f5971)
-# Ignore VCS directories, you can use the same kind of rule outside 
-# OASIS_START/STOP if you want to exclude directories that contains 
+# DO NOT EDIT (digest: 67f24645218a87bc1b0f76fe6cd33670)
+# Ignore VCS directories, you can use the same kind of rule outside
+# OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
 <**/.svn>: -traverse
 <**/.svn>: not_hygienic
@@ -20,10 +20,16 @@
 <src/papiers.{native,byte}>: pkg_cmdliner
 <src/papiers.{native,byte}>: pkg_uri
 <src/papiers.{native,byte}>: pkg_zip
+<src/papiers.{native,byte}>: pkg_text
+<src/papiers.{native,byte}>: pkg_lwt
+<src/papiers.{native,byte}>: pkg_lwt.text
 <src/*.ml{,i}>: pkg_batteries
 <src/*.ml{,i}>: pkg_yojson
 <src/*.ml{,i}>: pkg_ANSITerminal
 <src/*.ml{,i}>: pkg_cmdliner
 <src/*.ml{,i}>: pkg_uri
 <src/*.ml{,i}>: pkg_zip
+<src/*.ml{,i}>: pkg_text
+<src/*.ml{,i}>: pkg_lwt
+<src/*.ml{,i}>: pkg_lwt.text
 # OASIS_STOP

@@ -191,8 +191,7 @@ let update_title _ doc_id new_title =
   let title = match new_title with
     | Some t -> t
     | None ->
-      print_string "New title: ";
-      read_line () |> String.strip
+      read_line ~prompt:"New title: " () |> String.strip
   in
 
   try

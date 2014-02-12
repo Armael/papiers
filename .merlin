@@ -1,3 +1,6 @@
 PKG batteries
+PKG lwt
+PKG lwt.text
+PKG text
 B _build
 S _build
