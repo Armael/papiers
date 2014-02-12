@@ -4,7 +4,7 @@
 
 ## Build instructions
 
-- Install batteries, yojson, ANSITerminal, uri, camlzip and cmdliner (`opam install batteries yojson ANSITerminal uri camlzip cmdliner` if you have opam)
+- Install the dependencies (`opam install batteries yojson ANSITerminal uri camlzip cmdliner ocaml-text lwt cpdf` if you have opam)
 - Edit the `src/config.ml` if you want to change the default reader for the sources (default: `xdg-open`), or the colors.
 - Then:
 ```
