@@ -69,23 +69,23 @@ let display_doc (db_path: PathGen.t) (doc: Db.document) =
 (* Query informations :                                                       *)
 (******************************************************************************)
 
-let query_title () =
-  read_line ~prompt:"Title: " () |> String.strip
+let query_title ?title () =
+  read_line ~prompt:"Title: " ?initial_text:title () |> String.strip
 
-let query_authors () =
-  read_line ~prompt:"Authors (comma separated): " ()
+let query_authors ?authors () =
+  read_line ~prompt:"Authors (comma separated): " ?initial_text:authors ()
   |> String.nsplit ~by:","
   |> List.map String.strip
 
-let query_tags () =
-  read_line ~prompt:"Tags (comma separated): " ()
+let query_tags ?tags () =
+  read_line ~prompt:"Tags (comma separated): " ?initial_text:tags ()
   |> String.nsplit ~by:","
   |> List.map String.strip
 
-let query_doc_infos () =
-  let title = query_title ()
-  and authors = query_authors ()
-  and tags = query_tags () in
+let query_doc_infos ?infos () =
+  let title = query_title ?title:(Option.bind infos Tuple3.first) ()
+  and authors = query_authors ?authors:(Option.bind infos Tuple3.second) ()
+  and tags = query_tags ?tags:(Option.bind infos Tuple3.third) () in
 
   title, authors, tags
 

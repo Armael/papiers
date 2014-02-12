@@ -111,7 +111,17 @@ let document action arg =
       iter_effect_tl
         (fun src ->
           if not (source_already_exists src) then
-            let (name, authors, tags) = Ui.query_doc_infos () in
+            let (ti, au, ta) = (
+              Metadata.get db_path src `Title,
+              Metadata.get db_path src `Authors,
+              Metadata.get db_path src `Tags
+            ) in
+
+            let (name, authors, tags) =
+              Ui.query_doc_infos
+                ~infos:(ti, au, ta)
+                ()
+            in
             let doc = Db.add db ~name ~source:[src] ~authors ~tags in
             print_string "\nSuccessfully added:\n";
             Ui.display_doc (get_db_path ()) doc

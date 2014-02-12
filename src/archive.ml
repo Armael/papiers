@@ -133,7 +133,7 @@ This isn't allowed. What do?\n\n";
         let title = Ui.query_multi_choices [
           'f', "Use the first document's title", const doc1.Db.name;
           's', "Use the second document's title", const doc2.Db.name;
-          'm', "Manually define a new title", Ui.query_title;
+          'm', "Manually define a new title", (fun () -> Ui.query_title ());
         ] () in
 
         let authors = Ui.query_multi_choices [
@@ -141,7 +141,7 @@ This isn't allowed. What do?\n\n";
           's', "Use the second document's author(s)", const doc2.Db.authors;
           'b', "Use authors of both documents",
             (fun () -> List.unique_cmp (doc1.Db.authors @ doc2.Db.authors));
-          'm', "Define manually the author(s)", Ui.query_authors;
+          'm', "Define manually the author(s)", (fun () -> Ui.query_authors ());
         ] () in
 
         let sources () = Ui.query_multi_choices [
@@ -163,7 +163,7 @@ This isn't allowed. What do?\n\n";
           's', "Use the second document's tag(s)", const doc2.Db.tags;
           'b', "Use tags of both documents",
             (fun () -> List.unique_cmp (doc1.Db.tags @ doc2.Db.tags));
-          'm', "Define manually the tag(s)", Ui.query_tags;
+          'm', "Define manually the tag(s)", (fun () -> Ui.query_tags ());
         ] () in
 
         `MergeTo (title, authors, sources, tags)
