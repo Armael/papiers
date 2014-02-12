@@ -2,5 +2,8 @@ PKG batteries
 PKG lwt
 PKG lwt.text
 PKG text
-B _build
-S _build
+PKG ANSITerminal
+PKG zip
+PKG uri
+B _build/src
+S src
