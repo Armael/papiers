@@ -89,7 +89,8 @@ let import_rel src =
   let uri = Uri.of_string src in
   match Uri.scheme uri with
   | None | Some "file" ->
-    let path = Uri.path uri
+    let path = Uri.path_and_query uri
+      |> Uri.pct_decode
       |> PathGen.of_string
       |> PathGen.normalize
     in
