@@ -62,15 +62,15 @@ let initialize (dir: string) =
   Db.store PathGen.(append dir Db.out_name |> to_string) empty_db
 
 (* Search *)
-let search short max_res query =
+let search_docs query =
   let db = load_db () in
-  let ranked_docs =
-    Db.fold (fun doc acc -> (Query.eval query doc, doc)::acc) db []
-    |> List.filter (fun ((u, v), _) -> not (u = 0. && v = 0.))
-    |> List.sort (fun a b -> compare (fst b) (fst a))
-    |> List.map snd
-  in
+  Db.fold (fun doc acc -> (Query.eval query doc, doc)::acc) db []
+  |> List.filter (fun ((u, v), _) -> not (u = 0. && v = 0.))
+  |> List.sort (fun a b -> compare (fst b) (fst a))
+  |> List.map snd
 
+let search short max_res query =
+  let ranked_docs = search_docs query in
   let display =
     if short then
       iter_effect_tl (fun doc -> print_int doc.Db.id)
@@ -101,7 +101,7 @@ let document action arg =
 
     let check = List.filter_map (fun src ->
       match src with
-      | Source.File f -> Some (PathGen.to_string f)
+      | Source.File f -> Some PathGen.(concat db_path f |> to_string)
       | _ -> None
     ) sources |> check_sources in
 
@@ -346,3 +346,10 @@ let open_src id src_ids =
     `Ok ()
   with Not_found ->
     `Error (false, "There is no document with id " ^ (string_of_int id))
+
+(* Search and open the first source of the first document found *)
+let lucky query =
+  search_docs query
+  |> List.Exceptionless.hd
+  |> Option.may (fun doc -> open_src doc.Db.id [0] |> ignore)
+

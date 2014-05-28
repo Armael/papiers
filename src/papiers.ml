@@ -212,6 +212,26 @@ let import_cmd =
   Term.(pure import $ zipname),
   Term.info "import" ~doc ~man
 
+let kwd_converter =
+  let parse elt =
+    try
+      match String.split elt ~by:":" with
+      | ("id", s) -> (
+        try `Ok (Query.Id (int_of_string s)) with
+          Failure "int_of_string" ->
+            `Error (Printf.sprintf "%s must be an int\n" s)
+      )
+      | ("title", s) | ("ti", s) -> `Ok (Query.Title s)
+      | ("a", s) | ("au", s) | ("author", s) -> `Ok (Query.Author s)
+      | ("s", s) | ("src", s) | ("source", s) -> `Ok (Query.Source s)
+      | ("ta", s) | ("tag", s) -> `Ok (Query.Tag s)
+      | (unknown, _) ->
+        `Error (Printf.sprintf "Unknown prefix %s\n" unknown)
+    with Not_found ->
+      `Ok (Query.String elt)
+  in
+  parse, fun ppf p -> Format.fprintf ppf "%s" (Query.str_of_query_elt p)
+
 let search_cmd =
   let max_results =
     let doc = "Maximum number of results to display" in
@@ -225,27 +245,6 @@ let search_cmd =
 
   let keywords =
     let doc = "Keywords used to search through the database" in
-    let kwd_converter =
-      let parse elt =
-        try
-          match String.split elt ~by:":" with
-          | ("id", s) -> (
-            try `Ok (Query.Id (int_of_string s)) with
-              Failure "int_of_string" ->
-                `Error (Printf.sprintf "%s must be an int\n" s)
-          )
-          | ("title", s) | ("ti", s) -> `Ok (Query.Title s)
-          | ("a", s) | ("au", s) | ("author", s) -> `Ok (Query.Author s)
-          | ("s", s) | ("src", s) | ("source", s) -> `Ok (Query.Source s)
-          | ("ta", s) | ("tag", s) -> `Ok (Query.Tag s)
-          | (unknown, _) ->
-            `Error (Printf.sprintf "Unknown prefix %s\n" unknown)
-        with Not_found ->
-          `Ok (Query.String elt)
-      in
-      parse, fun ppf p -> Format.fprintf ppf "%s" (Query.str_of_query_elt p)
-    in
-
     Arg.(non_empty & pos_all kwd_converter [] & info [] ~docv:"KEYWORDS" ~doc)
   in
   let doc = "Search through the database" in
@@ -260,6 +259,20 @@ let search_cmd =
   in
   Term.(pure search $ short $ max_results $ keywords),
   Term.info "search" ~doc ~man
+
+let lucky_cmd =
+  let keywords =
+    let doc = "Keywords used to search through the database" in
+    Arg.(non_empty & pos_all kwd_converter [] & info [] ~docv:"KEYWORDS" ~doc)
+  in
+  let doc = "Feeling lucky? Open the first result of a database request" in
+  let man = [
+    `S "DESCRIPTION";
+    `P "Just like $(i,search), search through the database, given a list of keywords, and open the first source of the first document found.";
+    `P "See the documentation of $(i,search) for the details about the keywords."]
+  in
+  Term.(pure lucky $ keywords),
+  Term.info "lucky" ~doc ~man
 
 let open_cmd =
   let id =
@@ -295,6 +308,7 @@ let cmds = [initialize_cmd;
             export_cmd;
             import_cmd;
             search_cmd;
+            lucky_cmd;
             open_cmd]
 
 let () =
