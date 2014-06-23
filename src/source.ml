@@ -105,3 +105,8 @@ let export_rel src =
   match src with
   | File path -> PathGen.to_string path
   | Other s -> s
+
+let pretty_name src =
+  match src with
+  | File path -> PathGen.name_core path
+  | Other s -> s

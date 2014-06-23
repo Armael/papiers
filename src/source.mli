@@ -17,3 +17,5 @@ val import_rel : string -> t
 (* [export_rel ~src] is equivalent to
    [export ~src ~db_path:(BatPathGen.OfString.of_string ".")] *)
 val export_rel : t -> string
+
+val pretty_name : t -> string

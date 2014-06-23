@@ -38,6 +38,7 @@ let get (db: BatPathGen.OfString.t) (src: Source.t) (k: kind) =
   | Source.File f ->
     Option.bind (BatPathGen.OfString.ext f) (function
     | "pdf" ->
-      Some (Pdf.get_metadata (Source.export db src) k)
+      let d = Pdf.get_metadata (Source.export db src) k in
+      if d <> "" then Some d else None
     | _ -> None)
   | Source.Other _ -> None

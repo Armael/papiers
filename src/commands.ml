@@ -112,7 +112,7 @@ let document action arg =
         (fun src ->
           if not (source_already_exists src) then
             let (ti, au, ta) = (
-              Metadata.get db_path src `Title,
+              Some (Metadata.get db_path src `Title |? Source.pretty_name src),
               Metadata.get db_path src `Authors,
               Metadata.get db_path src `Tags
             ) in
