@@ -255,7 +255,7 @@ let rename doc_id src_idx =
   `Ok (store_db db)
 
 (* Show *)
-let show ids =
+let show short ids =
   let db = load_db () in
   let maybe_get id =
     try Some (Db.get db id) with Not_found -> None
@@ -268,7 +268,11 @@ let show ids =
     else
       List.filter_map maybe_get ids
   in
-  iter_effect_tl (Ui.display_doc (get_db_path ())) print_newline docs
+  if short then
+    iter_effect_tl (fun doc -> print_int doc.Db.id)
+      (fun () -> print_char ' ') docs
+  else
+    iter_effect_tl (Ui.display_doc (get_db_path ())) print_newline docs
 
 (* Status *)
 let status () =
