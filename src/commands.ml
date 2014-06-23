@@ -120,7 +120,7 @@ let document action arg =
             let (name, authors, tags) =
               Ui.query_doc_infos
                 ~infos:(ti, au, ta)
-                ()
+                (Source.export_rel src)
             in
             let doc = Db.add db ~name ~source:[src] ~authors ~tags in
             print_string "\nSuccessfully added:\n";
