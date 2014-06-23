@@ -63,7 +63,10 @@ let import ?(check_file_exists = false) (db_path: PathGen.t) (src: string) =
   let uri = Uri.of_string src in
   match Uri.scheme uri with
   | None | Some "file" ->
-    let path = Uri.path uri |> PathGen.of_string in
+    let path = Uri.path_and_query uri
+      |> Uri.pct_decode
+      |> PathGen.of_string
+    in
 
     if check_file_exists then (
       let full_path = full_path_in_cwd path |> PathGen.to_string in
