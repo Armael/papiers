@@ -4,7 +4,7 @@
 
 ## Build instructions
 
-- Install the dependencies (`opam install batteries yojson ANSITerminal uri camlzip cmdliner text lwt cpdf` (in this order) if you have opam)
+- Install the dependencies (`opam install batteries yojson ANSITerminal uri camlzip cmdliner text react lwt cpdf` (in this order) if you have opam)
 - Edit the `src/config.ml` if you want to change the default reader for the sources (default: `xdg-open`), or the colors.
 - Then:
 ```
