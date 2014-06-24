@@ -87,54 +87,18 @@ let source_cmd =
   Term.(ret (pure source $ action $ doc_id $ arg)),
   Term.info "source" ~doc ~man
 
-let tag_cmd =
-  let action =
-    let doc = "What to do: $(b,add), $(b,del)" in
-    Arg.(required & pos 0 (some action_conv) None & info [] ~docv:"ACTION" ~doc)
+let edit_cmd =
+  let ids =
+    let doc = "Ids of the documents to edit" in
+    Arg.(non_empty & pos_all int [] & info [] ~docv:"DOC_IDs" ~doc)
   in
-  let doc_id =
-    let doc = "Id of the document to modify" in
-    Arg.(required & pos 1 (some int) None & info [] ~docv:"DOC_ID" ~doc)
-  in
-  let arg =
-    let doc = "Name(s) of the tag(s)" in
-    Arg.(non_empty & pos_right 1 string [] & info [] ~docv:"TAGS" ~doc)
-  in
-  let doc = "Add or remove tags from a document" in
+  let doc = "Edit informations about documents" in
   let man = [
     `S "DESCRIPTION";
-    `P "Add or remove tags from a document";
-    `P "If $(b,ACTION) is:"; `Noblank;
-    `P "- $(b,add), the tags $(b,TAGS) are added to the document of id $(b,DOC_ID)"; `Noblank;
-    `P "- $(b,del), the tags $(b,TAGS) are removed from the document of id $(b,DOC_ID)";
+    `P "Edit informations about documents of ids $(b,DOC_IDs).";
   ] in
-  Term.(ret (pure tag $ action $ doc_id $ arg)),
-  Term.info "tag" ~doc ~man
-
-let title_cmd =
-  let action =
-    (* There is only one hardcodded action for now: update *)
-    let doc = "What to do: $(b,update)" in
-    Arg.(required &
-         pos 0 (some (singleton_conv "update" identity ((^) "Unknown action "))) None &
-         info [] ~docv:"ACTION" ~doc)
-  in
-  let doc_id =
-    let doc = "Id of the document to modify" in
-    Arg.(required & pos 1 (some int) None & info [] ~docv:"DOC_ID" ~doc)
-  in
-  let new_title =
-    let doc = "The new title" in
-    Arg.(value & pos 3 (some string) None & info [] ~docv:"TITLE" ~doc)
-  in
-  let doc = "Modify the title of a document" in
-  let man = [
-    `S "DESCRIPTION";
-    `P "Update the title of a document";
-    `P "With $(b,ACTION) being $(b,update), the title of the document of id $(b,DOC_ID) is set to $(b,TITLE).";
-  ] in
-  Term.(ret (pure update_title $ action $ doc_id $ new_title)),
-  Term.info "title" ~doc ~man
+  Term.(pure edit $ ids),
+  Term.info "edit" ~doc ~man
 
 let rename_cmd =
   let id =
@@ -303,9 +267,8 @@ let default_cmd =
 
 let cmds = [initialize_cmd;
             doc_cmd;
-            title_cmd;
             source_cmd;
-            tag_cmd;
+            edit_cmd;
             rename_cmd;
             show_cmd;
             status_cmd;

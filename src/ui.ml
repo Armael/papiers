@@ -83,7 +83,7 @@ let query_tags ?tags () =
   |> List.map String.strip
 
 let query_doc_infos ?infos doc_name =
-  Printf.printf "Querying metadata for \"%s\":\n%!" doc_name;
+  Option.may (Printf.printf "Querying metadata for \"%s\":\n%!") doc_name;
   let title = query_title ?title:(Option.bind infos Tuple3.first) ()
   and authors = query_authors ?authors:(Option.bind infos Tuple3.second) ()
   and tags = query_tags ?tags:(Option.bind infos Tuple3.third) () in

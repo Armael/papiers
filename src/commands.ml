@@ -120,7 +120,7 @@ let document action arg =
             let (name, authors, tags) =
               Ui.query_doc_infos
                 ~infos:(ti, au, ta)
-                (Source.export_rel src)
+                (Some (Source.export_rel src))
             in
             let doc = Db.add db ~name ~source:[src] ~authors ~tags in
             print_string "\nSuccessfully added:\n";
@@ -177,39 +177,28 @@ let source action doc_id arg =
   with Not_found ->
     `Error (false, "There is no document with id " ^ (string_of_int doc_id))
 
-(* Tag *)
-let tag action doc_id arg =
+(* Tags/title/authors document editing *)
+let edit docs_id =
   let db = load_db () in
-  try
-    let doc = Db.get db doc_id in
+  iter_effect_tl (fun id ->
+    try
+      let doc = Db.get db id in
+      let l = String.concat ", " in
 
-    begin match action with
-    | `Add ->
-      Db.update db { doc with Db.tags = List.append doc.Db.tags arg };
-    | `Del ->
-      Db.update db { doc with
-        Db.tags = List.filter (neg (flip List.mem arg)) doc.Db.tags
-      }
-    end;
-    `Ok (store_db db)
-  with Not_found ->
-    `Error (false, "There is no document with id " ^ (string_of_int doc_id))
-
-(* Title *)
-let update_title _ doc_id new_title =
-  let db = load_db () in
-  let title = match new_title with
-    | Some t -> t
-    | None ->
-      read_line ~prompt:"New title: " () |> String.strip
-  in
-
-  try
-    let doc = Db.get db doc_id in
-    Db.update db { doc with Db.name = title };
-    `Ok (store_db db)
-  with Not_found ->
-    `Error (false, "There is no document with id " ^ (string_of_int doc_id))
+      let (name, authors, tags) =
+        Ui.query_doc_infos
+          ~infos:(Some doc.Db.name,
+                  Some (l doc.Db.authors),
+                  Some (l doc.Db.tags))
+          None
+      in
+      let doc' = { doc with Db.name; Db.authors; Db.tags } in
+      Db.update db doc'
+    with
+      Not_found -> Printf.eprintf "There is no document with id %d\n" id
+  ) print_newline
+    docs_id;
+  store_db db
 
 (* Rename *)
 let rename doc_id src_idx =
