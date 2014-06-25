@@ -281,6 +281,7 @@ let status () =
 
   let dsources, fsources =
     List.enum sources
+    |> Enum.filter (Sys.file_exists % PathGen.to_string)
     |> Enum.partition (Sys.is_directory % PathGen.to_string)
     |> Tuple2.map List.of_enum (Hashtbl.of_enum % Enum.map (fun x -> x, ()))
   in
