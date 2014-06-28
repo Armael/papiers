@@ -33,6 +33,7 @@ module Document = struct
     authors: string list;
     source: Source.t list;
     tags: string list;
+    lang: string;
   }
   type t = Inner_db.document = {
     id: int;

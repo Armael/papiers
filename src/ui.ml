@@ -50,6 +50,12 @@ let display_doc (doc: Document.t) =
   );
   iter_effect_tl print_string (fun () -> print_string ", ") doc.content.authors;
 
+  if doc.content.lang <> "" then (
+    print_newline ();
+    print_color C.lang "Language: ";
+    print_string doc.content.lang;
+  );
+
   iteri_effects
     ~before:(fun () -> print_newline (); print_color C.sources "Source  :")
     ~between:(fun () -> print_newline (); print_string "         ")
@@ -82,13 +88,17 @@ let query_tags ?tags () =
   |> String.nsplit ~by:","
   |> List.map String.strip
 
+let query_lang ?lang () =
+  read_line ~prompt:"Language: " ?initial_text:lang () |> String.strip
+
 let query_doc_infos ?infos doc_name =
   Option.may (Printf.printf "Querying metadata for \"%s\":\n%!") doc_name;
-  let title = query_title ?title:(Option.bind infos Tuple3.first) ()
-  and authors = query_authors ?authors:(Option.bind infos Tuple3.second) ()
-  and tags = query_tags ?tags:(Option.bind infos Tuple3.third) () in
+  let title = query_title ?title:(Option.bind infos Tuple4.first) ()
+  and authors = query_authors ?authors:(Option.bind infos Tuple4.second) ()
+  and tags = query_tags ?tags:(Option.bind infos Tuple4.third) ()
+  and lang = query_lang ?lang:(Option.bind infos Tuple4.fourth) () in
 
-  title, authors, tags
+  title, authors, tags, lang
 
 let query_sources (db_path: Path.t) =
   read_line ~prompt:"Sources (comma separated): " ()
@@ -100,9 +110,10 @@ let query_doc (db_path: Path.t) =
   let title = query_title ()
   and authors = query_authors ()
   and sources = query_sources db_path
-  and tags = query_tags () in
+  and tags = query_tags ()
+  and lang = query_lang () in
 
-  title, authors, sources, tags
+  title, authors, sources, tags, lang
 
 let select_char (choices: (char * 'a) list) =
   let choices' = List.map fst choices in
@@ -172,7 +183,8 @@ let docs_share_source (db_path: Path.t) doc1 doc2 =
         doc1.content.name,
         doc1.content.authors,
         List.unique_cmp (doc1.content.source @ doc2.content.source),
-        List.unique_cmp (doc1.content.tags @ doc2.content.tags)
+        List.unique_cmp (doc1.content.tags @ doc2.content.tags),
+        doc1.content.lang
       )
   else begin
     (* These two documents look different. Ask the user *)
@@ -230,7 +242,13 @@ This isn't allowed. What do?\n\n";
         'm', "Define manually the tag(s)", (fun () -> query_tags ());
       ] () in
 
-      `MergeTo (title, authors, sources, tags)
+      let lang = query_multi_choices [
+        'f', "Use the first document's language", const doc1.content.lang;
+        's', "Use the second document's language", const doc2.content.lang;
+        'm', "Manually define a new language", (fun () -> query_lang ());
+      ] () in
+
+      `MergeTo (title, authors, sources, tags, lang)
         
     | `C -> `MergeTo (query_doc db_path)
 

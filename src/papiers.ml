@@ -194,6 +194,7 @@ let kwd_converter =
       | ("a", s) | ("au", s) | ("author", s) -> `Ok (Query.Author s)
       | ("s", s) | ("src", s) | ("source", s) -> `Ok (Query.Source s)
       | ("ta", s) | ("tag", s) -> `Ok (Query.Tag s)
+      | ("la", s) | ("lang", s) -> `Ok (Query.Lang s)
       | (unknown, _) ->
         `Error (Printf.sprintf "Unknown prefix %s\n" unknown)
     with Not_found ->

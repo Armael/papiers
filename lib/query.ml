@@ -49,6 +49,7 @@ type elt =
 | Author of string
 | Source of string
 | Tag of string
+| Lang of string
 
 let str_of_query_elt = function
   | Id i -> "id:" ^ (string_of_int i)
@@ -57,6 +58,7 @@ let str_of_query_elt = function
   | Author s -> "author:" ^ s
   | Source s -> "source:" ^ s
   | Tag s -> "tag:" ^ s
+  | Lang s -> "lang:" ^ s
 
 type t = elt list
 
@@ -104,6 +106,8 @@ let eval_query_elt (elt: elt) (doc: Inner_db.document): float * float =
     make_search s (List.map Source.to_string doc.content.source)
   | Tag s ->
     make_search s doc.content.tags
+  | Lang s ->
+    make_search s [doc.content.lang]
 
 let eval (q: t) (doc: Inner_db.document): float * float =
   List.map (fun elt -> eval_query_elt elt doc) q

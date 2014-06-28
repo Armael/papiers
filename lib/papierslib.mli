@@ -64,6 +64,7 @@ module Document : sig
     authors: string list;
     source: Source.t list;
     tags: string list;
+    lang: string
   }
 
   (** The type of a document. *)
@@ -126,6 +127,7 @@ module Query : sig
   | Author of string
   | Source of string
   | Tag of string
+  | Lang of string
 
   (** The type of a query.
       A query corresponds to a logical AND between the elements.
@@ -150,6 +152,7 @@ module FormatInfos : sig
   | Title
   | Authors
   | Tags
+  | Lang
 
   (** Query a source for informations. *)
   val get: Source.t -> kind -> string option

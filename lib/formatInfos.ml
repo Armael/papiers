@@ -14,6 +14,7 @@ type kind =
 | Title
 | Authors
 | Tags
+| Lang
 
 module Pdf = struct
   let get_metadata (filename: string) (k: kind) =
@@ -31,6 +32,7 @@ module Pdf = struct
         u ^ ", " ^ v
       else
         u ^ v
+    | Lang -> "" (* not supported *)
 end
 
 let get (src: Source.t) (k: kind) =

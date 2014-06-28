@@ -12,6 +12,7 @@ type document_content = {
   authors: string list;
   source: Source.t list;
   tags: string list;
+  lang: string;
 }
 
 type document = {
@@ -88,6 +89,7 @@ let json_of_document (doc: document): Json.json =
     "authors", `List (strlst2json doc.content.authors);
     "source", `List (srclst2json doc.content.source);
     "tags", `List (strlst2json doc.content.tags);
+    "lang", `String doc.content.lang;
   ]
 
 let json_of_t (db: t): Json.json =
@@ -118,8 +120,9 @@ let document_of_json (json: Json.json): document =
   let authors = json |> member "authors" |> to_list_option |? [] |> json2strlst in
   let source = json |> member "source" |> to_list_option |? [] |> json2srclst in
   let tags = json |> member "tags" |> to_list_option |? [] |> json2strlst in
+  let lang = json |> member "lang" |> to_string_option |? "" in
 
-  { id; content = { name; authors; source; tags } }
+  { id; content = { name; authors; source; tags; lang } }
 
 let t_of_json (json: Json.json): t =
   let open Json.Util in

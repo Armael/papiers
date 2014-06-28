@@ -33,3 +33,4 @@ using prefixes:
 - Prepend with `title:` or `ti:`, it'll search only in titles.
 - With `a:`, `au:` or `author:`, only in authors.
 - With `s:`, `src:` or `source:`, only in sources.
+- With `la:` or `lang:`, only for languages.

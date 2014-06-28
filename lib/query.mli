@@ -10,6 +10,7 @@ type elt =
 | Author of string
 | Source of string
 | Tag of string
+| Lang of string
       
 val str_of_query_elt : elt -> string
   

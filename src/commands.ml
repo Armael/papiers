@@ -105,16 +105,17 @@ let document action arg =
       iter_effect_tl
         (fun src ->
           if not (source_already_exists src) then
-            let (ti, au, ta) = (
+            let (ti, au, ta, la) = (
               Some (FormatInfos.get src FormatInfos.Title
                        |? Source.pretty_name src),
               FormatInfos.get src FormatInfos.Authors,
-              FormatInfos.get src FormatInfos.Tags
+              FormatInfos.get src FormatInfos.Tags,
+              FormatInfos.get src FormatInfos.Lang
             ) in
 
-            let (name, authors, tags) =
+            let (name, authors, tags, lang) =
               Ui.query_doc_infos
-                ~infos:(ti, au, ta)
+                ~infos:(ti, au, ta, la)
                 (Some (Source.to_string src))
             in
             let id = Document.add_new db {
@@ -122,6 +123,7 @@ let document action arg =
               Document.source = [src];
               Document.authors;
               Document.tags;
+              Document.lang;
             } in
             print_string "\nSuccessfully added:\n";
             Ui.display_doc (Document.get ~rel_paths:false db id)
@@ -183,7 +185,7 @@ let source action doc_id arg =
   with Not_found ->
     `Error (false, "There is no document with id " ^ (string_of_int doc_id))
 
-(* Tags/title/authors document editing *)
+(* Tags/title/authors/lang document editing *)
 let edit docs_id =
   let db = load_db () in
   iter_effect_tl (fun id ->
@@ -191,11 +193,12 @@ let edit docs_id =
       let doc = Document.get db id in
       let l = String.concat ", " in
 
-      let (name, authors, tags) =
+      let (name, authors, tags, lang) =
         Ui.query_doc_infos
           ~infos:(Some doc.Document.content.Document.name,
                   Some (l doc.Document.content.Document.authors),
-                  Some (l doc.Document.content.Document.tags))
+                  Some (l doc.Document.content.Document.tags),
+                  Some doc.Document.content.Document.lang)
           None
       in
       let doc' = { doc with
@@ -203,7 +206,8 @@ let edit docs_id =
           { doc.Document.content with
             Document.name;
             Document.authors;
-            Document.tags
+            Document.tags;
+            Document.lang;
           }
       } in
       Document.store db doc'
@@ -301,8 +305,12 @@ let import zipname =
         match Ui.docs_share_source (Db.location db) doc1 doc2 with
         | `KeepOnlyFirst -> Cmd.KeepOnlyFirst
         | `KeepOnlySecond -> Cmd.KeepOnlySecond
-        | `MergeTo (name, authors, source, tags) -> Cmd.MergeTo
-          {Document.name; Document.authors; Document.source; Document.tags}
+        | `MergeTo (name, authors, source, tags, lang) -> Cmd.MergeTo
+          {Document.name;
+           Document.authors;
+           Document.source;
+           Document.tags;
+           Document.lang}
         | `Quit -> raise Exit);
 
     Db.save db
