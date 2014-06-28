@@ -111,18 +111,19 @@ let document action arg =
       iter_effect_tl
         (fun src ->
           if not (source_already_exists src) then
-            let (ti, au, ta) = (
+            let (ti, au, ta, la) = (
               Some (Metadata.get db_path src `Title |? Source.pretty_name src),
               Metadata.get db_path src `Authors,
-              Metadata.get db_path src `Tags
+              Metadata.get db_path src `Tags,
+              Metadata.get db_path src `Lang
             ) in
 
-            let (name, authors, tags) =
+            let (name, authors, tags, lang) =
               Ui.query_doc_infos
-                ~infos:(ti, au, ta)
+                ~infos:(ti, au, ta, la)
                 (Some (Source.export_rel src))
             in
-            let doc = Db.add db ~name ~source:[src] ~authors ~tags in
+            let doc = Db.add db ~name ~source:[src] ~authors ~tags ~lang in
             print_string "\nSuccessfully added:\n";
             Ui.display_doc (get_db_path ()) doc
         )
@@ -177,7 +178,7 @@ let source action doc_id arg =
   with Not_found ->
     `Error (false, "There is no document with id " ^ (string_of_int doc_id))
 
-(* Tags/title/authors document editing *)
+(* Tags/title/authors/lang document editing *)
 let edit docs_id =
   let db = load_db () in
   iter_effect_tl (fun id ->
@@ -185,14 +186,15 @@ let edit docs_id =
       let doc = Db.get db id in
       let l = String.concat ", " in
 
-      let (name, authors, tags) =
+      let (name, authors, tags, lang) =
         Ui.query_doc_infos
           ~infos:(Some doc.Db.name,
                   Some (l doc.Db.authors),
-                  Some (l doc.Db.tags))
+                  Some (l doc.Db.tags),
+                  Some doc.Db.lang)
           None
       in
-      let doc' = { doc with Db.name; Db.authors; Db.tags } in
+      let doc' = { doc with Db.name; Db.authors; Db.tags; Db.lang } in
       Db.update db doc'
     with
       Not_found -> Printf.eprintf "There is no document with id %d\n" id

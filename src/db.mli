@@ -11,6 +11,7 @@ type document = {
   authors: string list;
   source: Source.t list;
   tags: string list;
+  lang: string;
 }
 
 type t
@@ -21,6 +22,7 @@ val add : t ->
   authors: string list ->
   source: Source.t list ->
   tags: string list ->
+  lang: string ->
   document
 
 val get : t -> int -> document

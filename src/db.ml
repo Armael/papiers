@@ -13,6 +13,7 @@ type document = {
   authors: string list;
   source: Source.t list;
   tags: string list;
+  lang: string;
 }
 
 module IntH = Hashtbl.Make (struct
@@ -25,8 +26,8 @@ type t = { table: document IntH.t; mutable fresh_id: int }
 
 let create () : t = { table = IntH.create 34; fresh_id = 0 }
 
-let add db ~name ~authors ~source ~tags =
-  let doc = { id = db.fresh_id; authors; name; source; tags } in
+let add db ~name ~authors ~source ~tags ~lang =
+  let doc = { id = db.fresh_id; authors; name; source; tags; lang } in
   IntH.replace db.table db.fresh_id doc;
   db.fresh_id <- db.fresh_id + 1;
   doc
@@ -85,6 +86,7 @@ let json_of_document (doc: document): Json.json =
     "authors", `List (strlst2json doc.authors);
     "source", `List (srclst2json doc.source);
     "tags", `List (strlst2json doc.tags);
+    "lang", `String doc.lang;
   ]
 
 let json_of_t (db: t): Json.json =
@@ -116,8 +118,9 @@ let document_of_json (json: Json.json): document =
   let authors = json |> member "authors" |> to_list_option |? [] |> json2strlst in
   let source = json |> member "source" |> to_list_option |? [] |> json2srclst in
   let tags = json |> member "tags" |> to_list_option |? [] |> json2strlst in
+  let lang = json |> member "lang" |> to_string_option |? "" in
 
-  { id; name; authors; source; tags }
+  { id; name; authors; source; tags; lang }
 
 let t_of_json (json: Json.json): t =
   let open Json.Util in

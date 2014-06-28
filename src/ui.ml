@@ -50,6 +50,12 @@ let display_doc (db_path: PathGen.t) (doc: Db.document) =
   );
   iter_effect_tl print_string (fun () -> print_string ", ") doc.authors;
 
+  if doc.lang <> "" then (
+    print_newline ();
+    print_color C.lang "Language: ";
+    print_string doc.lang;
+  );
+
   iteri_effects
     ~before:(fun () -> print_newline (); print_color C.sources "Source  :")
     ~between:(fun () -> print_newline (); print_string "         ")
@@ -82,13 +88,17 @@ let query_tags ?tags () =
   |> String.nsplit ~by:","
   |> List.map String.strip
 
+let query_lang ?lang () =
+  read_line ~prompt:"Language: " ?initial_text:lang () |> String.strip
+
 let query_doc_infos ?infos doc_name =
   Option.may (Printf.printf "Querying metadata for \"%s\":\n%!") doc_name;
-  let title = query_title ?title:(Option.bind infos Tuple3.first) ()
-  and authors = query_authors ?authors:(Option.bind infos Tuple3.second) ()
-  and tags = query_tags ?tags:(Option.bind infos Tuple3.third) () in
+  let title = query_title ?title:(Option.bind infos Tuple4.first) ()
+  and authors = query_authors ?authors:(Option.bind infos Tuple4.second) ()
+  and tags = query_tags ?tags:(Option.bind infos Tuple4.third) ()
+  and lang = query_lang ?lang:(Option.bind infos Tuple4.fourth) () in
 
-  title, authors, tags
+  title, authors, tags, lang
 
 
 let query_sources (db_path: PathGen.t) =
@@ -101,9 +111,10 @@ let query_doc (db_path: PathGen.t) =
   let title = query_title ()
   and authors = query_authors ()
   and sources = query_sources db_path
-  and tags = query_tags () in
+  and tags = query_tags ()
+  and lang = query_lang () in
 
-  title, authors, sources, tags
+  title, authors, sources, tags, lang
 
 let select_char (choices: (char * 'a) list) =
   let choices' = List.map fst choices in

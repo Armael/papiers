@@ -43,6 +43,7 @@ let db_iter
          authors: string list ->
          source: Source.t list ->
          tags: string list ->
+         lang: string ->
          Db.document) ->
      Db.document ->
      unit)
@@ -59,6 +60,7 @@ let db_iter
       (fun d ->
         let open Db in
         add db ~name:d.name ~authors:d.authors ~source:d.source ~tags:d.tags
+          ~lang:d.lang
           |> ignore)
       !cache;
     Db.iter (f (Db.add cache')) !cache;
@@ -108,7 +110,8 @@ module WhatDo = struct
             doc1.Db.name,
             doc1.Db.authors,
             List.unique_cmp (doc1.Db.source @ doc2.Db.source),
-            List.unique_cmp (doc1.Db.tags @ doc2.Db.tags)
+            List.unique_cmp (doc1.Db.tags @ doc2.Db.tags),
+            doc1.Db.lang
           )
     else begin
       (* These two documents look different. Ask the user *)
@@ -166,7 +169,13 @@ This isn't allowed. What do?\n\n";
           'm', "Define manually the tag(s)", (fun () -> Ui.query_tags ());
         ] () in
 
-        `MergeTo (title, authors, sources, tags)
+        let lang = Ui.query_multi_choices [
+          'f', "Use the first document's language", const doc1.Db.lang;
+          's', "Use the second document's language", const doc2.Db.lang;
+          'm', "Manually define a new language", (fun () -> Ui.query_lang ());
+        ] () in
+
+        `MergeTo (title, authors, sources, tags, lang)
 
       | `C -> `MergeTo (Ui.query_doc db_path)
 
@@ -333,13 +342,13 @@ let import_db (db_path: PathGen.t) (current: Db.t) (to_import: Db.t) =
       | `KeepOnlySecond -> clean (doc1, loc1);
         (doc2, loc2)
 
-      | `MergeTo (name, authors, source, tags) ->
+      | `MergeTo (name, authors, source, tags, lang) ->
         clean (doc1, loc1);
         clean (doc2, loc2);
         (* BWAH. We are modifying the collection we are iterating on!
            This seems to work well because of the inner implementation of
            Db.t (which is currently an hashtbl, but it is ugly. *)
-        let merged = db_add ~name ~authors ~source ~tags in
+        let merged = db_add ~name ~authors ~source ~tags ~lang in
         (merged, `ToImport)
 
       | `Quit -> failwith "User interrupt"

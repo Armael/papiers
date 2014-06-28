@@ -13,6 +13,7 @@ type kind = [
 | `Title
 | `Authors
 | `Tags
+| `Lang
 ]
 
 module Pdf = struct
@@ -31,6 +32,7 @@ module Pdf = struct
         u ^ ", " ^ v
       else
         u ^ v
+    | `Lang -> "" (* not supported *)
 end
 
 let get (db: BatPathGen.OfString.t) (src: Source.t) (k: kind) =
