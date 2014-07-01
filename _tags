@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: c6ca22f3c365e02e34891839d40088e8)
+# DO NOT EDIT (digest: 589e85921c18390804ba36df2c59cb93)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -13,6 +13,14 @@
 ".git": not_hygienic
 "_darcs": -traverse
 "_darcs": not_hygienic
+# Library papierslib
+"lib/papierslib.cmxs": use_papierslib
+<lib/*.ml{,i}>: pkg_batteries
+<lib/*.ml{,i}>: pkg_camlpdf
+<lib/*.ml{,i}>: pkg_cpdf
+<lib/*.ml{,i}>: pkg_uri
+<lib/*.ml{,i}>: pkg_yojson
+<lib/*.ml{,i}>: pkg_zip
 # Executable papiers
 <src/papiers.{native,byte}>: pkg_ANSITerminal
 <src/papiers.{native,byte}>: pkg_batteries

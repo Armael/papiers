@@ -8,4 +8,6 @@ PKG uri
 PKG camlpdf
 PKG cpdf
 B _build/src
+B _build/lib
 S src
+S lib

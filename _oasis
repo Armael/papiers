@@ -6,6 +6,12 @@ Synopsis:    A tool to index your articles/books/... and quickly search
 Authors:     Armaël Guéneau
 License:     MIT
 Plugins:     DevFiles (0.3)
+  
+Library papierslib
+  Path:         lib/
+  BuildTools:   ocamlbuild
+  Modules:      Papierslib
+  BuildDepends: batteries, yojson, uri, cpdf, camlpdf, zip
 
 Executable papiers
   Path:       src/
@@ -13,4 +19,3 @@ Executable papiers
   MainIs:     papiers.ml
   CompiledObject: best
   BuildDepends: batteries, yojson, ANSITerminal, cmdliner, uri, zip, text, react, lwt, lwt.text, cpdf, camlpdf
-  
