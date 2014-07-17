@@ -71,8 +71,8 @@ let search short max_res query =
       iter_effect_tl Ui.display_doc print_newline
   in
 
-  (max_res |> Option.map (flip List.take ranked_docs))
-  |? ranked_docs
+  ranked_docs
+  |> (Option.map List.take max_res |? identity)
   |> display
 
 (* Doc *)
