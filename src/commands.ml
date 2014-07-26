@@ -59,9 +59,9 @@ let initialize (dir: string) =
   Cmd.init (Path.of_string dir)
 
 (* Search *)
-let search short max_res query =
+let search short exact_match max_res query =
   let db = load_db () in
-  let ranked_docs = Cmd.search db query
+  let ranked_docs = Cmd.search ~exact_match db query
                     |> List.map (Document.get ~rel_paths:false db) in
   let display =
     if short then
@@ -337,7 +337,7 @@ let open_src id src_ids =
     `Error (false, "There is no document with id " ^ (string_of_int id))
 
 (* Search and open the first source of the first document found *)
-let lucky query =
-  Cmd.lucky (load_db ()) query
+let lucky exact_match query =
+  Cmd.lucky ~exact_match (load_db ()) query
   |> Option.may (fun doc_id -> open_src doc_id [0] |> ignore)
 

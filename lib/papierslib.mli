@@ -164,10 +164,12 @@ module Cmd : sig
   val init : Path.t -> unit
 
   (** Run the input query on the input database, returning a list of (ids of)
-      matching documents. *)
-  val search : Db.t -> Query.t -> Document.id list
+      matching documents. If [exact_match] is set to false, (it is by default)
+      matched words can differ from the keywords by some letters (based on a
+      Levenstein distance computation). *)
+  val search : ?exact_match:bool -> Db.t -> Query.t -> Document.id list
   (** Same, but returns only the best matching document. *)
-  val lucky : Db.t -> Query.t -> Document.id option
+  val lucky : ?exact_match:bool -> Db.t -> Query.t -> Document.id option
 
   (** Renames the sources of ids [src_ids] (by default, all sources) of a
       document thanks to the input renaming function, which takes the title and

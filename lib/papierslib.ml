@@ -98,15 +98,15 @@ module Cmd = struct
     mkpath (Path.to_string dir);
     Inner_db.store Path.(append dir Inner_db.out_name |> to_string) empty_db
 
-  let search ((db, _): Db.t) (query: Query.t) =
-    Inner_db.fold (fun doc acc -> (Query.eval query doc, doc)::acc) db []
+  let search ?(exact_match = false) ((db, _): Db.t) (query: Query.t) =
+    Inner_db.fold (fun doc acc -> (Query.eval ~exact_match query doc, doc)::acc) db []
     |> List.filter (fun ((u, v), _) -> not (u = 0. && v = 0.))
     |> List.sort (fun a b -> compare (fst b) (fst a))
     |> List.map snd
     |> List.map (fun doc -> doc.Inner_db.id)
 
-  let lucky (db: Db.t) (query: Query.t) =
-    List.Exceptionless.hd (search db query)
+  let lucky ?(exact_match = false) (db: Db.t) (query: Query.t) =
+    List.Exceptionless.hd (search ~exact_match db query)
 
   let rename ?(src_ids = [])
       (f: title:string -> authors:string list -> string)

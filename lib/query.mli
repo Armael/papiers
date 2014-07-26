@@ -16,4 +16,4 @@ val str_of_query_elt : elt -> string
   
 type t = elt list
     
-val eval : t -> Inner_db.document -> float * float
+val eval : ?exact_match:bool -> t -> Inner_db.document -> float * float
