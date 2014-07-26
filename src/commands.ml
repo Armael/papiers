@@ -62,15 +62,15 @@ let initialize (dir: string) =
   Db.store PathGen.(append dir Db.out_name |> to_string) empty_db
 
 (* Search *)
-let search_docs query =
+let search_docs exact_match query =
   let db = load_db () in
-  Db.fold (fun doc acc -> (Query.eval query doc, doc)::acc) db []
+  Db.fold (fun doc acc -> (Query.eval ~exact_match query doc, doc)::acc) db []
   |> List.filter (fun ((u, v), _) -> not (u = 0. && v = 0.))
   |> List.sort (fun a b -> compare (fst b) (fst a))
   |> List.map snd
 
-let search short max_res query =
-  let ranked_docs = search_docs query in
+let search short exact max_res query =
+  let ranked_docs = search_docs exact query in
   let display =
     if short then
       iter_effect_tl (fun doc -> print_int doc.Db.id)
@@ -344,8 +344,8 @@ let open_src id src_ids =
     `Error (false, "There is no document with id " ^ (string_of_int id))
 
 (* Search and open the first source of the first document found *)
-let lucky query =
-  search_docs query
+let lucky exact query =
+  search_docs exact query
   |> List.Exceptionless.hd
   |> Option.may (fun doc -> open_src doc.Db.id [0] |> ignore)
 

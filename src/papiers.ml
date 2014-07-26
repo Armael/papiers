@@ -211,6 +211,11 @@ let search_cmd =
     Arg.(value & flag & info ["short"; "s"] ~doc)
   in
 
+  let exact =
+    let doc = "Only search for documents that match exactly the query (no levenstein distance computation, etc.)" in
+    Arg.(value & flag & info ["exact"; "e"] ~doc)
+  in
+
   let keywords =
     let doc = "Keywords used to search through the database" in
     Arg.(non_empty & pos_all kwd_converter [] & info [] ~docv:"KEYWORDS" ~doc)
@@ -225,10 +230,15 @@ let search_cmd =
     `P "With $(b,author:), $(b,au:) or $(b,a:), only authors"; `Noblank;
     `P "With $(b,source:), $(b,src:) or $(b,s:), only sources"]
   in
-  Term.(pure search $ short $ max_results $ keywords),
+  Term.(pure search $ short $ exact $ max_results $ keywords),
   Term.info "search" ~doc ~man
 
 let lucky_cmd =
+  let exact =
+    let doc = "Only search for documents that match exactly the query (no levenstein distance computation, etc.)" in
+    Arg.(value & flag & info ["exact"; "e"] ~doc)
+  in
+
   let keywords =
     let doc = "Keywords used to search through the database" in
     Arg.(non_empty & pos_all kwd_converter [] & info [] ~docv:"KEYWORDS" ~doc)
@@ -239,7 +249,7 @@ let lucky_cmd =
     `P "Just like $(i,search), search through the database, given a list of keywords, and open the first source of the first document found.";
     `P "See the documentation of $(i,search) for the details about the keywords."]
   in
-  Term.(pure lucky $ keywords),
+  Term.(pure lucky $ exact $ keywords),
   Term.info "lucky" ~doc ~man
 
 let open_cmd =

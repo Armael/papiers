@@ -62,7 +62,8 @@ let str_of_query_elt = function
 
 type query = query_elt list
 
-let eval_query_elt (elt: query_elt) (doc: Db.document): float * float =
+let eval_query_elt ?(exact_match = false) (elt: query_elt) (doc: Db.document):
+    float * float =
   let ldist u v =
     let d = levenshtein ~del:1 ~insert:1 ~subst:1 ~eq:(=) u v in
     let norm_d = (float_of_int d) /.
@@ -73,16 +74,18 @@ let eval_query_elt (elt: query_elt) (doc: Db.document): float * float =
   let search u (* in *) v =
     let u = String.lowercase u and v = String.lowercase v in
     if u = v then (1., 0.)
-    else if String.Exceptionless.find v u <> None then
-      (0., 1.)
-    else begin
-      try
-        String.nsplit v ~by:" "
-        |> List.map (ldist u)
-        |> List.fold_left (fun acc d -> acc ++ (0., d)) (0., 0.)
-      with Not_found ->
-        (0., ldist u v)
-    end
+    else if not exact_match then
+      if String.Exceptionless.find v u <> None then
+        (0., 1.)
+      else begin
+        try
+          String.nsplit v ~by:" "
+          |> List.map (ldist u)
+          |> List.fold_left (fun acc d -> acc ++ (0., d)) (0., 0.)
+        with Not_found ->
+          (0., ldist u v)
+      end
+    else (0., 0.)
   in
 
   let make_search (s: string) (l: string list) =
@@ -107,6 +110,6 @@ let eval_query_elt (elt: query_elt) (doc: Db.document): float * float =
   | Tag s ->
     make_search s doc.tags
 
-let eval (q: query) (doc: Db.document): float * float =
-  List.map (fun elt -> eval_query_elt elt doc) q
+let eval ?(exact_match = false) (q: query) (doc: Db.document): float * float =
+  List.map (fun elt -> eval_query_elt ~exact_match elt doc) q
   |> List.fold_left ( ** ) (1., 1.)
