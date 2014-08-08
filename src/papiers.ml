@@ -272,23 +272,44 @@ let open_cmd =
   Term.(ret (pure open_src $ id $ src_id)),
   Term.info "open" ~doc ~man
 
+let help_format = `Pager
+
 let default_cmd =
   let doc = "index your documents and quickly search through them" in
-  Term.(ret (pure (`Help (`Pager, None)))),
+  Term.(ret (pure (`Help (help_format, None)))),
   Term.info "papiers" ~version:"0.2" ~doc
 
-let cmds = [initialize_cmd;
-            doc_cmd;
-            source_cmd;
-            edit_cmd;
-            rename_cmd;
-            show_cmd;
-            status_cmd;
-            export_cmd;
-            import_cmd;
-            search_cmd;
-            lucky_cmd;
-            open_cmd]
+let cmds =
+  let cmds = [
+    initialize_cmd;
+    doc_cmd;
+    source_cmd;
+    edit_cmd;
+    rename_cmd;
+    show_cmd;
+    status_cmd;
+    export_cmd;
+    import_cmd;
+    search_cmd;
+    lucky_cmd;
+    open_cmd;
+  ] in
+  let help_cmd =
+    let doc = "Provide help on a command" in
+    let man = [
+      `S "DESCRIPTION";
+      `P "Display help for the command CMD, or for all commands if no CMD is given";
+    ] in
+    let help cmd = `Help (help_format, cmd) in
+    let name_arg =
+      let names = "help" :: List.map (fun (_cmd, info) -> Term.name info) cmds in
+      Arg.(enum (List.combine names names)) in
+    let cmd_arg =
+      let doc = "name of the command (empty to list all commands)" in
+      Arg.(value & pos 0 (some name_arg) None & info [] ~docv:"CMD?" ~doc) in
+    Term.(ret (pure help $ cmd_arg)),
+    Term.info "help" ~doc ~man in
+  help_cmd :: cmds
 
 let () =
   let display_err msg = print_endline ("Error: " ^ msg) in
