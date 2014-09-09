@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 589e85921c18390804ba36df2c59cb93)
+# DO NOT EDIT (digest: 07310eba50473540036ba9c7e55c641f)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -34,6 +34,7 @@
 <src/papiers.{native,byte}>: pkg_uri
 <src/papiers.{native,byte}>: pkg_yojson
 <src/papiers.{native,byte}>: pkg_zip
+<src/papiers.{native,byte}>: use_papierslib
 <src/*.ml{,i}>: pkg_ANSITerminal
 <src/*.ml{,i}>: pkg_batteries
 <src/*.ml{,i}>: pkg_camlpdf
@@ -46,4 +47,5 @@
 <src/*.ml{,i}>: pkg_uri
 <src/*.ml{,i}>: pkg_yojson
 <src/*.ml{,i}>: pkg_zip
+<src/*.ml{,i}>: use_papierslib
 # OASIS_STOP

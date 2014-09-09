@@ -6,21 +6,12 @@
 open Batteries
 open Prelude
 
-module PathGen = BatPathGen.OfString
+open Papierslib
+
 module Glob = BatGlobal
 
 (* Path to the directory that contains the database *)
-let db_base_path =
-  let open PathGen in
-
-  let cwd = Sys.getcwd () |> of_string |> normalize in
-  let has_db (dir: PathGen.t) =
-    let db = append dir Db.out_name |> to_string in
-    Sys.file_exists db && (not (Sys.is_directory db))
-  in
-
-  let parents = Enum.seq cwd (normalize % parent) ((<>) root) in
-  Enum.Exceptionless.find has_db parents
+let db_base_path = Db.find (Sys.getcwd () |> Path.of_string)
 
 let get_db_path () =
   match db_base_path with
@@ -29,11 +20,19 @@ let get_db_path () =
     Printf.eprintf "This is not a papiers repository (or any parent)\n";
     exit 1
 
-let get_db_name () =
-  PathGen.append (get_db_path ()) Db.out_name |> PathGen.to_string
+let load_db () = Db.load (get_db_path ())
 
-let load_db () = Db.load (get_db_name ())
-let store_db db = Db.store (get_db_name ()) db
+(******************************************************************************)
+
+let update_source (doc: Document.t) (srcs: Source.t list) =
+  { doc with
+    Document.content =
+      { doc.Document.content with
+        Document.source = srcs
+      }
+  }
+
+let sources (doc: Document.t) = doc.Document.content.Document.source
 
 (******************************************************************************)
 (* Papiers commands (add/remove/modify documents,…) :                         *)
@@ -57,26 +56,19 @@ let check_ids (ids: string list) =
 
 (* Initialize *)
 let initialize (dir: string) =
-  let dir = PathGen.of_string dir in
-  let empty_db = Db.create () in
-  Db.store PathGen.(append dir Db.out_name |> to_string) empty_db
+  Cmd.init (Path.of_string dir)
 
 (* Search *)
-let search_docs query =
-  let db = load_db () in
-  Db.fold (fun doc acc -> (Query.eval query doc, doc)::acc) db []
-  |> List.filter (fun ((u, v), _) -> not (u = 0. && v = 0.))
-  |> List.sort (fun a b -> compare (fst b) (fst a))
-  |> List.map snd
-
 let search short max_res query =
-  let ranked_docs = search_docs query in
+  let db = load_db () in
+  let ranked_docs = Cmd.search db query
+                    |> List.map (Document.get ~rel_paths:false db) in
   let display =
     if short then
-      iter_effect_tl (fun doc -> print_int doc.Db.id)
+      iter_effect_tl (fun doc -> print_int doc.Document.id)
         (fun () -> print_char ' ')
     else
-      iter_effect_tl (Ui.display_doc (get_db_path ())) print_newline
+      iter_effect_tl Ui.display_doc print_newline
   in
 
   (max_res |> Option.map (flip List.take ranked_docs))
@@ -86,22 +78,24 @@ let search short max_res query =
 (* Doc *)
 let document action arg =
   let db = load_db () in
+
   let source_already_exists (source: Source.t) =
-    Db.find_opt (fun doc ->
-      List.Exceptionless.find ((=) source) doc.Db.source
+    Document.find_opt db (fun doc ->
+      List.Exceptionless.find ((=) source) (sources doc)
       |> Option.is_some
-    ) db
+    )
     |> Option.is_some
   in
 
   match action with
   | `Add ->
-    let db_path = get_db_path () in
-    let sources = List.map (Source.import db_path) arg in
+    let db_path = Db.location db in
+    let sources = List.map (import_source db_path) arg
+    in
 
     let check = List.filter_map (fun src ->
       match src with
-      | Source.File f -> Some PathGen.(concat db_path f |> to_string)
+      | Source.File f -> Some Path.(concat db_path f |> to_string)
       | _ -> None
     ) sources |> check_sources in
 
@@ -112,23 +106,29 @@ let document action arg =
         (fun src ->
           if not (source_already_exists src) then
             let (ti, au, ta) = (
-              Some (Metadata.get db_path src `Title |? Source.pretty_name src),
-              Metadata.get db_path src `Authors,
-              Metadata.get db_path src `Tags
+              Some (FormatInfos.get src FormatInfos.Title
+                       |? Source.pretty_name src),
+              FormatInfos.get src FormatInfos.Authors,
+              FormatInfos.get src FormatInfos.Tags
             ) in
 
             let (name, authors, tags) =
               Ui.query_doc_infos
                 ~infos:(ti, au, ta)
-                (Some (Source.export_rel src))
+                (Some (Source.to_string src))
             in
-            let doc = Db.add db ~name ~source:[src] ~authors ~tags in
+            let id = Document.add_new db {
+              Document.name;
+              Document.source = [src];
+              Document.authors;
+              Document.tags;
+            } in
             print_string "\nSuccessfully added:\n";
-            Ui.display_doc (get_db_path ()) doc
+            Ui.display_doc (Document.get ~rel_paths:false db id)
         )
         print_newline
         sources;
-      `Ok (store_db db)
+      `Ok (Db.save db)
     end
 
   | `Del ->
@@ -139,19 +139,19 @@ let document action arg =
         (fun id ->
           let id = int_of_string id in
           try
-            Db.remove db (Db.get db id);
+            Document.remove db id;
             Printf.printf "Successfully removed document # %d\n" id
           with Not_found -> Printf.eprintf "There is no document with id %d\n" id
         )
         arg;
-      `Ok (store_db db)
+      `Ok (Db.save db)
     end
 
 (* Source *)
 let source action doc_id arg =
   let db = load_db () in
   try
-    let doc = Db.get db doc_id in
+    let doc = Document.get db doc_id in
 
     match action with
     | `Add ->
@@ -159,9 +159,13 @@ let source action doc_id arg =
       | `Error e -> `Error (false, e)
       | `Ok ->
         let db_path = get_db_path () in
-        let sources = List.map (Source.import db_path) arg in
-        Db.update db { doc with Db.source = List.append doc.Db.source sources };
-        `Ok (store_db db)
+        let srcs = List.map (import_source db_path) arg in
+        Document.store db (
+          update_source doc (
+            List.append (sources doc) srcs
+          )
+        );
+        `Ok (Db.save db)
       end
 
     | `Del ->
@@ -169,10 +173,12 @@ let source action doc_id arg =
       | `Error e -> `Error (false, e)
       | `Ok ->
         let ids = List.map int_of_string arg in
-        Db.update db { doc with
-          Db.source = filteri (fun i _ -> not (List.mem i ids)) doc.Db.source
-        };
-        `Ok (store_db db)
+        Document.store db (
+          update_source doc (
+            filteri (fun i _ -> not (List.mem i ids)) (sources doc)
+          )
+        );
+        `Ok (Db.save db)
       end
   with Not_found ->
     `Error (false, "There is no document with id " ^ (string_of_int doc_id))
@@ -182,155 +188,136 @@ let edit docs_id =
   let db = load_db () in
   iter_effect_tl (fun id ->
     try
-      let doc = Db.get db id in
+      let doc = Document.get db id in
       let l = String.concat ", " in
 
       let (name, authors, tags) =
         Ui.query_doc_infos
-          ~infos:(Some doc.Db.name,
-                  Some (l doc.Db.authors),
-                  Some (l doc.Db.tags))
+          ~infos:(Some doc.Document.content.Document.name,
+                  Some (l doc.Document.content.Document.authors),
+                  Some (l doc.Document.content.Document.tags))
           None
       in
-      let doc' = { doc with Db.name; Db.authors; Db.tags } in
-      Db.update db doc'
+      let doc' = { doc with
+        Document.content =
+          { doc.Document.content with
+            Document.name;
+            Document.authors;
+            Document.tags
+          }
+      } in
+      Document.store db doc'
     with
       Not_found -> Printf.eprintf "There is no document with id %d\n" id
   ) print_newline
     docs_id;
-  store_db db
+  Db.save db
 
 (* Rename *)
-let rename doc_id src_idx =
-  let check_idx = if src_idx = [] then const true else flip List.mem src_idx in
-  let resolve_conflict =
-    let already_used = Hashtbl.create 37 in
-    fun path ->
-      match Hashtbl.Exceptionless.find already_used path with
-      | Some i ->
-        Hashtbl.replace already_used path (i+1);
-        let (parent, base, ext) = path in
-        (parent, base ^ "_" ^ string_of_int (i+1), ext)
-      | None -> Hashtbl.replace already_used path 1;
-        path
-  in
-
+let rename doc_id src_ids =
   let db = load_db () in
-  let doc = Db.get db doc_id in
-
-  let source =
-    List.mapi (fun i src ->
-      match src, check_idx i with
-      | Source.File path, true ->
-        let newname = Config.rename doc.Db.name doc.Db.authors in
-        let newpath = PathGen.map
-          (resolve_conflict % Tuple3.map2 (const newname))
-          path
-        in
-        let before = PathGen.to_string path in
-        let after = PathGen.to_string newpath in
-        (* Safety check *)
-        if Sys.file_exists after then
-          failwith (Printf.sprintf
-                      "Cannot rename %s to %s: this file already exists"
-                      before after);
-        Unix.rename before after;
-        print_string (before ^ " -> " ^ after ^ "\n");
-        Source.File newpath
-      | _ -> src
-    ) doc.Db.source
+  let renamed = Cmd.rename
+    ~src_ids
+    (fun ~title ~authors -> Config.rename title authors)
+    db
+    doc_id
   in
-  Db.update db { doc with Db.source = source };
-  `Ok (store_db db)
+  List.iter (fun (before, after) ->
+    print_string (before ^ " -> " ^ after ^ "\n")
+  ) renamed;
+  `Ok (Db.save db)
 
 (* Show *)
 let show short ids =
   let db = load_db () in
   let maybe_get id =
-    try Some (Db.get db id) with Not_found -> None
+    try Some (Document.get ~rel_paths:false db id) with Not_found -> None
   in
 
   let docs =
     if ids = [] then
-      Db.fold List.cons db []
-      |> List.sort (fun a b -> compare a.Db.id b.Db.id)
+      Document.fold List.cons db []
+      |> List.sort (fun a b -> compare a.Document.id b.Document.id)
     else
       List.filter_map maybe_get ids
   in
   if short then
-    iter_effect_tl (fun doc -> print_int doc.Db.id)
+    iter_effect_tl (fun doc -> print_int doc.Document.id)
       (fun () -> print_char ' ') docs
   else
-    iter_effect_tl (Ui.display_doc (get_db_path ())) print_newline docs
+    iter_effect_tl Ui.display_doc print_newline docs
 
 (* Status *)
 let status () =
   let db = load_db ()
   and path_db = get_db_path () in
-  let files = explore_directory (PathGen.to_string path_db)
-              |> List.map (PathGen.(normalize % of_string)) in
-  let sources =  Db.fold
+  let files = explore_directory (Path.to_string path_db)
+              |> List.map (Path.(normalize % of_string)) in
+  let sources =  Document.fold
                  (fun doc acc ->
                     List.filter_map
                       (function
                       | Source.File s -> Some s
                       | Source.Other s -> None)
-                      doc.Db.source
+                      (sources doc)
                    @ acc)
                  db [] in
 
   let dsources, fsources =
     List.enum sources
-    |> Enum.filter (Sys.file_exists % PathGen.to_string)
-    |> Enum.partition (Sys.is_directory % PathGen.to_string)
+    |> Enum.filter (Sys.file_exists % Path.to_string)
+    |> Enum.partition (Sys.is_directory % Path.to_string)
     |> Tuple2.map List.of_enum (Hashtbl.of_enum % Enum.map (fun x -> x, ()))
   in
 
   let res = List.filter (fun f -> not (
     Hashtbl.mem fsources f
-    || List.exists (fun ds -> PathGen.belongs ds f) dsources
+    || List.exists (fun ds -> Path.belongs ds f) dsources
   )) files in
   Ui.display_files res
 
 (* Export *)
-let export zipname ids =
+let export zipname doc_ids =
   let db = load_db () in
-  let exported_db =
-    if ids = [] then
-      db
-    else begin
-      let new_db = Db.create () in
-      List.iter (fun id ->
-        let doc = Db.get db id in
-        Db.add new_db
-          ~name:doc.Db.name
-          ~authors:doc.Db.authors
-          ~source:doc.Db.source
-          ~tags:doc.Db.tags
-        |> ignore
-      ) ids;
-      new_db
-    end in
-
-  Archive.export exported_db (get_db_path ()) zipname
+  let failures = Cmd.export ~doc_ids db (Path.of_string zipname) in
+  List.iter (fun (file, err) ->
+    Printf.printf "Couldn't export %s: %s\n" file err
+  ) failures
 
 (* Import *)
 let import zipname =
   let db = load_db () in
-  let db_path = get_db_path () in
-  let to_import: Db.t = Archive.import_sources db_path zipname in
-  Archive.import_db db_path db to_import;
-  store_db db
+  try
+    Cmd.import db (Path.of_string zipname)
+      ~file_already_exists:
+      (fun filename -> match Ui.file_already_exists filename with
+      | `Rename f -> Cmd.Rename f
+      | `Overwrite -> Cmd.Overwrite
+      | `Skip -> Cmd.Skip
+      | `Quit -> raise Exit)
+
+      ~documents_share_sources:
+      (fun doc1 doc2 ->
+        match Ui.docs_share_source (Db.location db) doc1 doc2 with
+        | `KeepOnlyFirst -> Cmd.KeepOnlyFirst
+        | `KeepOnlySecond -> Cmd.KeepOnlySecond
+        | `MergeTo (name, authors, source, tags) -> Cmd.MergeTo
+          {Document.name; Document.authors; Document.source; Document.tags}
+        | `Quit -> raise Exit);
+
+    Db.save db
+  with Exit ->
+    ()
 
 (* Open *)
 let open_src id src_ids =
   let db = load_db () in
   try
-    let doc = Db.get db id in
+    let doc = Document.get ~rel_paths:false db id in
     List.iter (fun src_id ->
      try
-        let src = List.nth doc.Db.source src_id
-                  |> Source.export (get_db_path ()) in
+        let src = List.nth (sources doc) src_id
+                  |> Source.to_string in
         let cmd = Config.external_reader ^ " " ^ "\'" ^ src ^ "\'" in
         Printf.printf "Running \'%s\'." cmd;
         spawn cmd
@@ -343,7 +330,6 @@ let open_src id src_ids =
 
 (* Search and open the first source of the first document found *)
 let lucky query =
-  search_docs query
-  |> List.Exceptionless.hd
-  |> Option.may (fun doc -> open_src doc.Db.id [0] |> ignore)
+  Cmd.lucky (load_db ()) query
+  |> Option.may (fun doc_id -> open_src doc_id [0] |> ignore)
 

@@ -1,21 +1,33 @@
-OASISFormat: 0.3
 Name:        papiers
 Version:     0.1
 Synopsis:    A tool to index your articles/books/... and quickly search
   through them
 Authors:     Armaël Guéneau
 License:     MIT
-Plugins:     DevFiles (0.3)
   
+OASISFormat: 0.4
+BuildTools: ocamlbuild
+Plugins: DevFiles (0.4), META (0.4)
+
 Library papierslib
-  Path:         lib/
-  BuildTools:   ocamlbuild
-  Modules:      Papierslib
-  BuildDepends: batteries, yojson, uri, cpdf, camlpdf, zip
+  Path:            lib
+  Modules:         Papierslib
+  InternalModules: Preludelib, Inner_db, Source, Query, FormatInfos, Archive
+  BuildDepends:    batteries, yojson, uri, cpdf, camlpdf, zip
 
 Executable papiers
-  Path:       src/
-  BuildTools: ocamlbuild
-  MainIs:     papiers.ml
+  Path:           src
+  MainIs:         papiers.ml
   CompiledObject: best
-  BuildDepends: batteries, yojson, ANSITerminal, cmdliner, uri, zip, text, react, lwt, lwt.text, cpdf, camlpdf
+  BuildDepends:   papierslib, batteries, ANSITerminal, cmdliner, text, react, lwt, lwt.text
+
+AlphaFeatures: ocamlbuild_more_args
+Document "papierslib_api"
+  Type: ocamlbuild (0.4)
+  BuildTools: ocamldoc
+
+  Title: API reference for Papierslib
+  XOCamlbuildPath: .
+  XOCamlbuildExtraArgs:
+    "-docflags '-colorize-code -short-functors -charset utf-8'"
+  XOCamlbuildLibraries: papierslib

@@ -5,6 +5,7 @@
 
 open Batteries
 open Cmdliner
+open Papierslib
 open Commands
 
 (******************************************************************************)
