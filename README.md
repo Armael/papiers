@@ -12,6 +12,13 @@
 make && sudo make install
 ```
 
+You can build the html documentation for the `papierslib` library by running:
+```
+make doc
+```
+After that the generated documentation will be in the `papierslib_api.docdir`
+directory.
+
 ## How to use *Papiers*
 
 *Papiers* now works a bit like *git*: you have *papiers* repositories;
