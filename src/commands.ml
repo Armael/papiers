@@ -125,12 +125,13 @@ let document action arg =
               Document.tags;
               Document.lang;
             } in
+            Db.save db;
             print_string "\nSuccessfully added:\n";
             Ui.display_doc (Document.get ~rel_paths:false db id)
         )
         print_newline
         sources;
-      `Ok (Db.save db)
+      `Ok ()
     end
 
   | `Del ->
@@ -142,11 +143,12 @@ let document action arg =
           let id = int_of_string id in
           try
             Document.remove db id;
+            Db.save db;
             Printf.printf "Successfully removed document # %d\n" id
           with Not_found -> Printf.eprintf "There is no document with id %d\n" id
         )
         arg;
-      `Ok (Db.save db)
+      `Ok ()
     end
 
 (* Source *)
