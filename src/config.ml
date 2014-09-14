@@ -5,7 +5,9 @@
 
 open Batteries
 
-let external_reader = "xdg-open"
+let external_reader =
+  let readers = ["xdg-open"; "open"] in
+  List.find (fun c -> Sys.command ("type " ^ c) == 1) readers
 
 let colored_output = true
 
