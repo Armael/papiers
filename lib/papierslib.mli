@@ -1,3 +1,8 @@
+(******************************************************************************)
+(*   Copyright (c) 2013-2014 Armaël Guéneau.                                  *)
+(*   See the file LICENSE for copying permission.                             *)
+(******************************************************************************)
+
 (** A library that implement most of the features provided by the
     papiers binary. It provides them as an ocamlfind package that can be used to
     access and modify papiers databases. 

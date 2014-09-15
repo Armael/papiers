@@ -1,10 +1,6 @@
 (******************************************************************************)
-(*   Copyright (c) 2013 Armaël Guéneau.                                       *)
+(*   Copyright (c) 2013-2014 Armaël Guéneau.                                  *)
 (*   See the file LICENSE for copying permission.                             *)
-(*                                                                            *)
-(*   metadata.ml : Try to extract metadata from documents, e.g. the author,   *)
-(*                 the title, etc.                                            *)
-(*                                                                            *)
 (******************************************************************************)
 
 open Batteries

@@ -1,3 +1,8 @@
+(******************************************************************************)
+(*   Copyright (c) 2013-2014 Armaël Guéneau.                                  *)
+(*   See the file LICENSE for copying permission.                             *)
+(******************************************************************************)
+
 module Path = BatPathGen.OfString
 
 type t =

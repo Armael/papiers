@@ -1,9 +1,6 @@
 (******************************************************************************)
-(*   Copyright (c) 2013 Armaël Guéneau.                                       *)
+(*   Copyright (c) 2013-2014 Armaël Guéneau.                                  *)
 (*   See the file LICENSE for copying permission.                             *)
-(*                                                                            *)
-(*   prelude.ml : Utility functions.                                          *)
-(*                                                                            *)
 (******************************************************************************)
 
 open Batteries

@@ -1,11 +1,12 @@
 (******************************************************************************)
-(*   Copyright (c) 2013 Armaël Guéneau.                                       *)
+(*   Copyright (c) 2013-2014 Armaël Guéneau.                                  *)
 (*   See the file LICENSE for copying permission.                             *)
 (******************************************************************************)
 
 open Batteries
 
-type document_content = {
+type document_content = 
+{
   name: string;
   authors: string list;
   source: Source.t list;
