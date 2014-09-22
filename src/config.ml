@@ -7,7 +7,7 @@ open Batteries
 
 let external_reader =
   let readers = ["xdg-open"; "open"] in
-  List.Exceptionless.find (fun c -> Sys.command ("type " ^ c) == 1) readers
+  List.Exceptionless.find (fun c -> Sys.command ("type " ^ c) == 0) readers
   |? List.hd readers
 
 let colored_output = true
