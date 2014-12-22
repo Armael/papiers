@@ -1,6 +1,7 @@
 PKG batteries
+PKG yojson
 PKG lwt
-PKG lwt.text
+PKG lambda-term
 PKG text
 PKG ANSITerminal
 PKG zip

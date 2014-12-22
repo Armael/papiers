@@ -59,29 +59,27 @@ let explore_directory (dir: string) =
     !files in
   aux ""
 
-let read_line ?prompt ?initial_text () =
+class read_line ~term ~prompt = object(self)
+  inherit LTerm_read_line.read_line ()
+  inherit [Zed_utf8.t] LTerm_read_line.term term
+
+  method show_box = false
+
+  initializer
+    self#set_prompt
+      (React.S.const
+         (LTerm_text.of_string_maybe_invalid prompt))
+end
+
+let read_line ?(prompt = "") ?(initial_text = "") () =
   let open Lwt in
-  let prompt = Option.map (
-    Lwt_term.text
-    %> List.singleton
-    %> React.S.const
-    %> const
-  ) prompt in
-
-  let reader = Lwt_read_line.Control.make
-    ~mode:`none
-    ~map_result:return
-    ?prompt
-    ()
+  let main =
+    Lazy.force LTerm.stdout >>= fun term ->
+    let engine = new read_line ~term ~prompt in
+    CamomileLibrary.UTF8.iter engine#insert initial_text;
+    engine#run
   in
-  Option.may (fun text ->
-    Lwt_read_line.Control.send_command reader
-      (Lwt_read_line.Command.Char (OText.decode text))
-  ) initial_text;
-
-  Lwt_read_line.Control.result reader
-  >|= OText.encode
-  |> Lwt_main.run
+  Lwt_main.run main
 
 (*****************************************************************************)
 (* Path manipulations :                                                      *)

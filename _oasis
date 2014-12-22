@@ -19,7 +19,7 @@ Executable papiers
   Path:           src
   MainIs:         papiers.ml
   CompiledObject: best
-  BuildDepends:   papierslib, batteries, ANSITerminal, cmdliner, text, react, lwt, lwt.text
+  BuildDepends:   papierslib, batteries, ANSITerminal, cmdliner, lambda-term
 
 AlphaFeatures: ocamlbuild_more_args
 Document "papierslib_api"
