@@ -59,6 +59,13 @@ let explore_directory (dir: string) =
     !files in
   aux ""
 
+let in_path (name: string): bool =
+  Sys.getenv "PATH"
+  |> String.nsplit ~by:":"
+  |> List.Exceptionless.find (fun dir ->
+    Sys.file_exists (Filename.concat dir name))
+  |> Option.is_some
+
 class read_line ~term ~prompt = object(self)
   inherit LTerm_read_line.read_line ()
   inherit [Zed_utf8.t] LTerm_read_line.term term

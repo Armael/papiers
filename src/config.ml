@@ -4,10 +4,11 @@
 (******************************************************************************)
 
 open Batteries
+open Prelude
 
 let external_reader =
   let readers = ["xdg-open"; "open"] in
-  List.Exceptionless.find (fun c -> Sys.command ("type " ^ c) == 0) readers
+  List.Exceptionless.find in_path readers
   |? List.hd readers
 
 let colored_output = true
