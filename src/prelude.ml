@@ -3,7 +3,6 @@
 (*   See the file LICENSE for copying permission.                             *)
 (******************************************************************************)
 
-module OText = Text
 open Batteries
 
 open Papierslib
