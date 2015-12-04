@@ -6,7 +6,6 @@
 open Batteries
 
 let (++) (a, b) (u, v) = (a +. u, b +. v)
-let ( ** ) (a, b) (u, v) = (a *. u, b *. v)
 
 let min3 a b c =
   min a (min b c)
@@ -112,5 +111,8 @@ let eval_query_elt ?(exact_match = false) (elt: elt) (doc: Inner_db.document): f
     make_search s [doc.content.lang]
 
 let eval ?(exact_match = false) (q: t) (doc: Inner_db.document): float * float =
-  List.map (fun elt -> eval_query_elt ~exact_match elt doc) q
-  |> List.fold_left ( ** ) (1., 1.)
+  let query_elts = List.map (fun elt -> eval_query_elt ~exact_match elt doc) q in
+  if List.mem (0., 0.) query_elts then
+    (0., 0.)
+  else
+    List.fold_left ( ++ ) (0., 0.) query_elts
