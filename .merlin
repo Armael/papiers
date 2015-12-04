@@ -8,6 +8,7 @@ PKG zip
 PKG uri
 PKG camlpdf
 PKG cpdf
+PKG cmdliner
 B _build/src
 B _build/lib
 S src
