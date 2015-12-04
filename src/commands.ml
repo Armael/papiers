@@ -254,7 +254,7 @@ let show short ids =
     iter_effect_tl Ui.display_doc print_newline docs
 
 (* Status *)
-let status () =
+let status name_only =
   let db = load_db ()
   and path_db = get_db_path () in
   let files = explore_directory (Path.to_string path_db)
@@ -280,7 +280,7 @@ let status () =
     Hashtbl.mem fsources f
     || List.exists (fun ds -> Path.belongs ds f) dsources
   )) files in
-  Ui.display_files res
+  Ui.display_files name_only res
 
 (* Export *)
 let export zipname doc_ids =

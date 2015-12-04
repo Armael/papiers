@@ -23,11 +23,13 @@ let print_color style =
   else
     print_string
 
-let display_files (files: Path.t list) =
-  print_string "Files not archived:";
-  print_newline ();
-  print_string "(Use \"papiers doc add <file>...\" to archive them.)";
-  print_newline ();
+let display_files (only_files: bool) (files: Path.t list) =
+  if not only_files then (
+    print_string "Files not archived:";
+    print_newline ();
+    print_string "(Use \"papiers doc add <file>...\" to archive them.)";
+    print_newline ();
+  );
   List.iter (fun path ->
                let spath = Path.name path in
                (* Do not show hidden files who are theorically not papers : *)

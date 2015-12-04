@@ -139,13 +139,17 @@ let show_cmd =
   Term.info "show" ~doc ~man
 
 let status_cmd =
+  let name_only =
+    let doc = "Only display the names of the files (skipping the explanations)" in
+    Arg.(value & flag & info ["name-only"; "n"] ~doc)
+  in
   let doc = "Show files not archived by papiers." in
   let man = [
     `S "DESCRIPTION";
     `P "Display the names of the files which are not archived by papiers";
     `P "Just use \"papiers status\".";
   ] in
-  Term.(pure status $ pure ()),
+  Term.(pure status $ name_only),
   Term.info "status" ~doc ~man
 
 let export_cmd =
