@@ -16,7 +16,7 @@ install: [
 build-doc: [ make "doc" ]
 build-test: [ make "test" ]
 remove: [
-    ["ocamlfind" "remove" "papiers"]
+    ["ocamlfind" "remove" "papierslib"]
 ]
 depends: [
     "ocamlfind" {build}
