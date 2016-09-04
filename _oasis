@@ -4,7 +4,7 @@ Synopsis:    A tool to index your articles/books/... and quickly search
   through them
 Authors:     Armaël Guéneau
 License:     MIT
-  
+
 OASISFormat: 0.4
 BuildTools: ocamlbuild
 Plugins: DevFiles (0.4), META (0.4)
@@ -12,7 +12,7 @@ Plugins: DevFiles (0.4), META (0.4)
 Library papierslib
   Path:            lib
   Modules:         Papierslib
-  InternalModules: Preludelib, Inner_db, Source, Query, FormatInfos, Archive
+  InternalModules: Papierslib_preludelib, Papierslib_inner_db, Papierslib_source, Papierslib_query, Papierslib_formatInfos, Papierslib_archive
   BuildDepends:    batteries, yojson, uri, cpdf, camlpdf, zip
 
 Executable papiers

@@ -4,10 +4,11 @@
 (******************************************************************************)
 
 open Batteries
-open Preludelib
+open Papierslib_preludelib
 
 module Path = BatPathGen.OfString
-module Source = Source
+module Source = Papierslib_source
+module Inner_db = Papierslib_inner_db
 
 module Db = struct
   type t = Inner_db.t * Path.t
@@ -94,8 +95,9 @@ module Document = struct
     Inner_db.remove db doc_id
 end
 
-module Query = Query
-module FormatInfos = FormatInfos
+module Query = Papierslib_query
+module FormatInfos = Papierslib_formatInfos
+module Archive = Papierslib_archive
 
 module Cmd = struct
   let init (dir: Path.t) =
@@ -130,7 +132,7 @@ module Cmd = struct
         | None -> Hashtbl.replace already_used path 1;
           path
     in
-    
+
     let doc = Inner_db.get db doc_id in
     let renames = ref [] in
 

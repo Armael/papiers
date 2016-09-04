@@ -5,11 +5,11 @@
 
 open Batteries
 
-type document_content = 
+type document_content =
 {
   name: string;
   authors: string list;
-  source: Source.t list;
+  source: Papierslib_source.t list;
   tags: string list;
   lang: string;
 }

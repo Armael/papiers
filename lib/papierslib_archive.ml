@@ -4,9 +4,11 @@
 (******************************************************************************)
 
 open Batteries
-open Preludelib
+open Papierslib_preludelib
 
 module Path = BatPathGen.OfString
+module Source = Papierslib_source
+module Inner_db = Papierslib_inner_db
 
 let file_equal (f1: string) (f2: string) =
   let c1 = open_in_bin f1 in
@@ -96,7 +98,7 @@ type solve_file_already_existing =
 | Rename of Path.t
 | Overwrite
 | Skip
-    
+
 type solve_conflicting_documents =
 | KeepOnlyFirst
 | KeepOnlySecond

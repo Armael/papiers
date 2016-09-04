@@ -5,6 +5,7 @@
 
 open Batteries
 module Path = BatPathGen.OfString
+module Source = Papierslib_source
 
 type kind =
 | Title
@@ -33,7 +34,7 @@ end
 
 let get (src: Source.t) (k: kind) =
   match src with
-  | Source.File file -> 
+  | Source.File file ->
     Option.bind (BatPathGen.OfString.ext file) (function
     | "pdf" ->
       begin try

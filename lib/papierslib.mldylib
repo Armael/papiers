@@ -1,10 +1,10 @@
 # OASIS_START
-# DO NOT EDIT (digest: 9741be2c576e519ed3fce93e0ee979c2)
+# DO NOT EDIT (digest: e992aff70674db3d2005f831b035acc2)
 Papierslib
-Preludelib
-Inner_db
-Source
-Query
-FormatInfos
-Archive
+Papierslib_preludelib
+Papierslib_inner_db
+Papierslib_source
+Papierslib_query
+Papierslib_formatInfos
+Papierslib_archive
 # OASIS_STOP

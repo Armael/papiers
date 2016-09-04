@@ -6,6 +6,7 @@
 open Batteries
 
 module PathGen = BatPathGen.OfString
+module Source = Papierslib_source
 
 type document_content = {
   name: string;
@@ -126,7 +127,7 @@ let document_of_json (json: Json.json): document =
 
 let t_of_json (json: Json.json): t =
   let open Json.Util in
-  let table = 
+  let table =
     json |> to_list
          |> List.map (fun j -> let doc = document_of_json j in (doc.id, doc))
          |> List.enum

@@ -4,6 +4,8 @@
 (******************************************************************************)
 
 open Batteries
+module Source = Papierslib_source
+module Inner_db = Papierslib_inner_db
 
 let (++) (a, b) (u, v) = (a +. u, b +. v)
 
