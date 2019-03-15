@@ -3,13 +3,11 @@
 (*   See the file LICENSE for copying permission.                             *)
 (******************************************************************************)
 
-open Batteries
-
 type document_content =
 {
   name: string;
   authors: string list;
-  source: Papierslib_source.t list;
+  source: Source.t list;
   tags: string list;
   lang: string;
 }

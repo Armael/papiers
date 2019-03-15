@@ -6,7 +6,6 @@
 open Batteries
 
 module PathGen = BatPathGen.OfString
-module Source = Papierslib_source
 
 type document_content = {
   name: string;
@@ -83,7 +82,6 @@ let json_of_document (doc: document): Json.json =
   let srclst2json = List.map (fun s ->
     `String (Source.to_string s)
   ) in
-  let open Json in
   `Assoc [
     "id", `Int doc.id;
     "name", `String doc.content.name;

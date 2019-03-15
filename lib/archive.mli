@@ -4,7 +4,6 @@
 (******************************************************************************)
 
 module Path : module type of BatPathGen.OfString
-module Inner_db = Papierslib_inner_db
 
 val export: Inner_db.t -> Path.t -> string -> (string * string) list
 

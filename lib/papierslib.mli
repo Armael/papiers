@@ -5,7 +5,7 @@
 
 (** A library that implement most of the features provided by the
     papiers binary. It provides them as an ocamlfind package that can be used to
-    access and modify papiers databases. 
+    access and modify papiers databases.
 
     The papiers binary itself is implemented using papierslib. *)
 
@@ -173,6 +173,7 @@ module Cmd : sig
       matched words can differ from the keywords by some letters (based on a
       Levenstein distance computation). *)
   val search : ?exact_match:bool -> Db.t -> Query.t -> Document.id list
+
   (** Same, but returns only the best matching document. *)
   val lucky : ?exact_match:bool -> Db.t -> Query.t -> Document.id option
 
@@ -198,7 +199,7 @@ module Cmd : sig
       error)]. *)
   val export : ?doc_ids:(Document.id list) -> Db.t -> Path.t ->
     (string * string) list
-    
+
   (** Exception indicating an invalid archive. *)
   exception Invalid_archive
 

@@ -1,0 +1,3 @@
+(executable
+  (name papiers)
+  (libraries papierslib ANSITerminal camlpdf batteries lambda-term cmdliner))

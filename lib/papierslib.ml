@@ -4,11 +4,13 @@
 (******************************************************************************)
 
 open Batteries
-open Papierslib_preludelib
+open Preludelib
 
 module Path = BatPathGen.OfString
-module Source = Papierslib_source
-module Inner_db = Papierslib_inner_db
+module Source = Source
+module Inner_db = Inner_db
+(* module Source = Papierslib__Source
+ * module Inner_db = Papierslib__Inner_db *)
 
 module Db = struct
   type t = Inner_db.t * Path.t
@@ -61,13 +63,13 @@ module Document = struct
           }
       }
 
-  let find ((db, p): Db.t) (f: t -> bool): id =
+  let find ((db, _): Db.t) (f: t -> bool): id =
     (Inner_db.find f db).id
 
-  let find_opt ((db, p): Db.t) (f: t -> bool): id option =
+  let find_opt ((db, _): Db.t) (f: t -> bool): id option =
     Inner_db.find_opt f db |> Option.map (fun doc -> doc.id)
 
-  let fold f (db, p) acc = Inner_db.fold f db acc
+  let fold f (db, _) acc = Inner_db.fold f db acc
 
   (* Weak hashtable in the future? *)
   let store ((db, p): Db.t) (doc: t) =
@@ -95,9 +97,12 @@ module Document = struct
     Inner_db.remove db doc_id
 end
 
-module Query = Papierslib_query
-module FormatInfos = Papierslib_formatInfos
-module Archive = Papierslib_archive
+module Query = Query
+module FormatInfos = FormatInfos
+module Archive = Archive
+(* module Query = Papierslib__Query
+ * module FormatInfos = Papierslib__FormatInfos
+ * module Archive = Papierslib__Archive *)
 
 module Cmd = struct
   let init (dir: Path.t) =
@@ -117,7 +122,7 @@ module Cmd = struct
 
   let rename ?(src_ids = [])
       (f: title:string -> authors:string list -> string)
-      ((db, p): Db.t)
+      ((db, _): Db.t)
       (doc_id: Document.id)
       =
     let check_idx = if src_ids = [] then const true else flip List.mem src_ids in
@@ -141,8 +146,8 @@ module Cmd = struct
         match src, check_idx i with
         | Source.File path, true ->
           let newname = f
-            doc.Inner_db.content.Inner_db.name
-            doc.Inner_db.content.Inner_db.authors in
+            ~title:doc.Inner_db.content.Inner_db.name
+            ~authors:doc.Inner_db.content.Inner_db.authors in
           let newpath = Path.map
             (resolve_conflict % Tuple3.map2 (const newname))
             path
@@ -168,7 +173,7 @@ module Cmd = struct
                      List.filter_map
                        (function
                        | Source.File s -> Some s
-                       | Source.Other s -> None)
+                       | Source.Other _ -> None)
                        doc.Inner_db.content.Inner_db.source
                      @ acc)
                    db [] in

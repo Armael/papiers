@@ -50,7 +50,7 @@ let check_sources (srcs: string list) =
 let check_ids (ids: string list) =
   try let nint = List.find (fun s ->
     try int_of_string s |> ignore; false with
-      Failure "int_of_string" -> true) ids in
+      Failure _ -> true) ids in
       `Error (nint ^ " is not a valid id")
   with Not_found -> `Ok
 
@@ -264,7 +264,7 @@ let status name_only =
                     List.filter_map
                       (function
                       | Source.File s -> Some s
-                      | Source.Other s -> None)
+                      | Source.Other _ -> None)
                       (sources doc)
                    @ acc)
                  db [] in
@@ -325,13 +325,13 @@ let open_src id src_ids =
   try
     let doc = Document.get ~rel_paths:false db id in
     List.iter (fun src_id ->
-     try
-        let src = List.nth (sources doc) src_id
-                  |> Source.to_string in
+      match List.nth_opt (sources doc) src_id with
+      | Some src ->
+        let src = Source.to_string src in
         let cmd = Config.external_reader ^ " " ^ "\'" ^ src ^ "\'" in
         Printf.printf "Running \'%s\'." cmd;
         spawn cmd
-      with Invalid_argument "Index past end of list" ->
+      | None ->
         Printf.eprintf "There is no source with id %d\n" src_id
     ) src_ids;
     `Ok ()
@@ -342,4 +342,3 @@ let open_src id src_ids =
 let lucky exact_match query =
   Cmd.lucky ~exact_match (load_db ()) query
   |> Option.may (fun doc_id -> open_src doc_id [0] |> ignore)
-

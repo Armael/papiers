@@ -22,7 +22,7 @@ let action_conv =
 
 let singleton_conv x str_of_x error_msg =
   let parse y = if x = y then `Ok x else `Error (error_msg y) in
-  parse, fun ppf p -> Format.fprintf ppf "%s" (str_of_x x)
+  parse, fun ppf _ -> Format.fprintf ppf "%s" (str_of_x x)
 
 (*****************************************************************************)
 (* Commands :                                                                *)
@@ -191,7 +191,7 @@ let kwd_converter =
       match String.split elt ~by:":" with
       | ("id", s) -> (
         try `Ok (Query.Id (int_of_string s)) with
-          Failure "int_of_string" ->
+          Failure _ ->
             `Error (Printf.sprintf "%s must be an int\n" s)
       )
       | ("title", s) | ("ti", s) -> `Ok (Query.Title s)

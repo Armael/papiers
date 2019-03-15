@@ -4,11 +4,11 @@
 (******************************************************************************)
 
 open Batteries
-open Papierslib_preludelib
+open Preludelib
 
 module Path = BatPathGen.OfString
-module Source = Papierslib_source
-module Inner_db = Papierslib_inner_db
+
+exception ExitFailure
 
 let file_equal (f1: string) (f2: string) =
   let c1 = open_in_bin f1 in
@@ -18,17 +18,17 @@ let file_equal (f1: string) (f2: string) =
     try
       while true do
         let x = (try input_byte c1 with BatInnerIO.No_more_input ->
-          (try input_byte c2 |> ignore; failwith "" with
+          (try input_byte c2 |> ignore; raise ExitFailure with
             BatInnerIO.No_more_input -> raise Exit)) in
         let y = (try input_byte c2 with
-            BatInnerIO.No_more_input -> failwith "") in
+            BatInnerIO.No_more_input -> raise ExitFailure) in
         if x <> y then
-          failwith ""
+          raise ExitFailure
       done;
       assert false
     with
     | Exit -> true
-    | Failure "" -> false
+    | ExitFailure -> false
   in
   close_in c1;
   close_in c2;
@@ -189,7 +189,7 @@ let import_sources (db_path: Path.t) (zipname: string)
 
 (* Once the archive files are copyied in the repository, we need to merge the
    archive database to the existing one *)
-let import_db (db_path: Path.t) (current: Inner_db.t) (to_import: Inner_db.t)
+let import_db (_db_path: Path.t) (current: Inner_db.t) (to_import: Inner_db.t)
     ~solve_conflict
     =
   (* Build a reverse mapping <source -> document> for the current db *)

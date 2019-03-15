@@ -43,7 +43,7 @@ let explore_directory (dir: string) =
   let (^/) = Filename.concat in
   let root = dir in
 
-  let rec aux prefix = 
+  let rec aux prefix =
     let files = ref [] in
     begin try
       let content = Sys.readdir (root ^/ prefix) in
@@ -69,7 +69,7 @@ class read_line ~term ~prompt = object(self)
   inherit LTerm_read_line.read_line ()
   inherit [Zed_utf8.t] LTerm_read_line.term term
 
-  method show_box = false
+  method! show_box = false
 
   initializer
     self#set_prompt
