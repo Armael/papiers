@@ -1,0 +1,21 @@
+opam-version: "2.0"
+name: "papiers"
+version: "dev"
+author: "Armael"
+maintainer: "Armael"
+build: [
+    ["dune" "build" "-p" name "-j" jobs]
+]
+depends: [
+    "dune" {build}
+    "papierslib"
+    "batteries"
+    "yojson"
+    "ANSITerminal"
+    "cmdliner"
+    "camlpdf"
+    "lambda-term"
+]
+homepage: "http://git.isomorphis.me/papiers/about/"
+dev-repo: "git://git.isomorphis.me/papiers.git"
+bug-reports: "none"

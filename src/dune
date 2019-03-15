@@ -1,4 +1,6 @@
 (executable
   (name papiers)
+  (public_name papiers)
+  (package papiers)
   (libraries papierslib ANSITerminal camlpdf batteries lambda-term cmdliner
              yojson))
