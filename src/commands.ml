@@ -328,7 +328,7 @@ let open_src id src_ids =
       match List.nth_opt (sources doc) src_id with
       | Some src ->
         let src = Source.to_string src in
-        let cmd = Config.external_reader ^ " " ^ "\'" ^ src ^ "\'" in
+        let cmd = Config.external_reader () ^ " " ^ "\'" ^ src ^ "\'" in
         Printf.printf "Running \'%s\'." cmd;
         spawn cmd
       | None ->

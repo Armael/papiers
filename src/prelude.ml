@@ -37,10 +37,11 @@ let filteri (p: int -> 'a -> bool) (l: 'a list) =
   ) (0, []) l
   |> snd |> List.rev
 
+let (^/) = Filename.concat
+
 (* Return the list of all the files in a given directory, with
    their relative path into the directory. *)
 let explore_directory (dir: string) =
-  let (^/) = Filename.concat in
   let root = dir in
 
   let rec aux prefix =

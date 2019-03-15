@@ -1,3 +1,4 @@
 (executable
   (name papiers)
-  (libraries papierslib ANSITerminal camlpdf batteries lambda-term cmdliner))
+  (libraries papierslib ANSITerminal camlpdf batteries lambda-term cmdliner
+             yojson))
