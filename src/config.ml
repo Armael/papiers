@@ -11,7 +11,7 @@ type userconfig = {
   external_reader : string list;
 }
 
-let userconfig_of_json (json: Json.json): userconfig option =
+let userconfig_of_json (json: Json.t): userconfig option =
   let open Json.Util in
   let external_reader =
     json |> member "external_reader"

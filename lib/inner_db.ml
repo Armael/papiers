@@ -77,7 +77,7 @@ module Json = Yojson.Basic
 
 (* Converting [t] -> [Json.json] *)
 
-let json_of_document (doc: document): Json.json =
+let json_of_document (doc: document): Json.t =
   let strlst2json = List.map (fun s -> `String s) in
   let srclst2json = List.map (fun s ->
     `String (Source.to_string s)
@@ -91,15 +91,15 @@ let json_of_document (doc: document): Json.json =
     "lang", `String doc.content.lang;
   ]
 
-let json_of_t (db: t): Json.json =
+let json_of_t (db: t): Json.t =
   `List (
     fold (fun doc docs -> (json_of_document doc)::docs)
       db []
   )
 
-(* Converting [Json.json] -> [t] *)
+(* Converting [Json.t] -> [t] *)
 
-let document_of_json (json: Json.json): document =
+let document_of_json (json: Json.t): document =
   let open Json.Util in
   let to_list_option = to_option to_list in
 
@@ -123,7 +123,7 @@ let document_of_json (json: Json.json): document =
 
   { id; content = { name; authors; source; tags; lang } }
 
-let t_of_json (json: Json.json): t =
+let t_of_json (json: Json.t): t =
   let open Json.Util in
   let table =
     json |> to_list
