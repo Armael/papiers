@@ -68,7 +68,7 @@ let in_path (name: string): bool =
 
 class read_line ~term ~prompt = object(self)
   inherit LTerm_read_line.read_line ()
-  inherit [Zed_utf8.t] LTerm_read_line.term term
+  inherit [Zed_string.t] LTerm_read_line.term term
 
   method! show_box = false
 
@@ -82,11 +82,11 @@ let read_line ?(prompt = "") ?(initial_text = "") () =
   let open Lwt in
   let main =
     Lazy.force LTerm.stdout >>= fun term ->
-    let engine = new read_line ~term ~prompt in
+    let engine = new read_line ~term ~prompt:(Zed_string.of_utf8 prompt) in
     CamomileLibrary.UTF8.iter engine#insert initial_text;
     engine#run
   in
-  Lwt_main.run main
+  Lwt_main.run main |> Zed_string.to_utf8
 
 (*****************************************************************************)
 (* Path manipulations :                                                      *)
