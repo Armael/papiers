@@ -3,33 +3,32 @@
 (*   See the file LICENSE for copying permission.                             *)
 (******************************************************************************)
 
-open Batteries
 open Preludelib
-
-module Path = BatPathGen.OfString
-
-exception ExitFailure
 
 let file_equal (f1: string) (f2: string) =
   let c1 = open_in_bin f1 in
   let c2 = open_in_bin f2 in
+  let buf1 = Bytes.create 4096 in
+  let buf2 = Bytes.create 4096 in
 
-  let res =
-    try
-      while true do
-        let x = (try input_byte c1 with BatInnerIO.No_more_input ->
-          (try input_byte c2 |> ignore; raise ExitFailure with
-            BatInnerIO.No_more_input -> raise Exit)) in
-        let y = (try input_byte c2 with
-            BatInnerIO.No_more_input -> raise ExitFailure) in
-        if x <> y then
-          raise ExitFailure
-      done;
-      assert false
-    with
-    | Exit -> true
-    | ExitFailure -> false
+  let rec compare_bytes i len =
+    if len = 0 then true
+    else Bytes.get buf1 i = Bytes.get buf2 i && compare_bytes (i+1) (len-1)
   in
+
+  let rec loop () =
+    let n = input c1 buf1 0 4096 in
+    if n = 0 then (
+      (* EOF; check that we EOF on c2 as well *)
+      try ignore (input_byte c2); false
+      with End_of_file -> true
+    ) else (
+      match really_input c2 buf2 0 n with
+      | exception End_of_file -> false
+      | () -> compare_bytes 0 n && loop ()
+    )
+  in
+  let res = loop () in
   close_in c1;
   close_in c2;
   res
@@ -46,6 +45,7 @@ let db_iter
      unit)
     (db: Inner_db.t) =
 
+  let open CCFun in
   let cache = ref (Inner_db.create ()) in
 
   Inner_db.iter (f (Inner_db.add !cache %> Inner_db.get !cache)) db;
@@ -62,7 +62,7 @@ let db_iter
     cache := cache'
   done
 
-let export (db: Inner_db.t) (db_path: Path.t) (zipname: string) =
+let export (db: Inner_db.t) (db_path: Fpath.t) (zipname: string) =
   let zip_out = Zip.open_out zipname in
   Zip.add_entry (Inner_db.to_string db) zip_out Inner_db.out_name;
 
@@ -71,8 +71,8 @@ let export (db: Inner_db.t) (db_path: Path.t) (zipname: string) =
     List.iter (fun src ->
       match src with
       | Source.File path ->
-        let full_path = Path.concat db_path path |> Path.to_string in
-        let rel_path = Path.to_string path in
+        let full_path = Fpath.append db_path path |> Fpath.to_string in
+        let rel_path = Fpath.to_string path in
 
         (try
            if Sys.is_directory full_path then
@@ -95,7 +95,7 @@ let export (db: Inner_db.t) (db_path: Path.t) (zipname: string) =
 exception Invalid_archive
 
 type solve_file_already_existing =
-| Rename of Path.t
+| Rename of Fpath.t
 | Overwrite
 | Skip
 
@@ -107,8 +107,8 @@ type solve_conflicting_documents =
 (* Copy the files (~= sources) from the archive to their final location, i.e. in
    the repository pointed by db_path. Is careful about file conflicts - don't
    overwrite existing files with same name when importing. *)
-let import_sources (db_path: Path.t) (zipname: string)
-    ~(solve_conflict: Path.t -> solve_file_already_existing):
+let import_sources (db_path: Fpath.t) (zipname: string)
+    ~(solve_conflict: Fpath.t -> solve_file_already_existing):
     Inner_db.t =
   let zip_in = Zip.open_in zipname in
   if not (has_db zip_in) then
@@ -118,51 +118,50 @@ let import_sources (db_path: Path.t) (zipname: string)
     let sources_to_skip = ref [] in
 
     (* We first import the sources, i.e everything but the db file *)
-    List.enum (Zip.entries zip_in)
-    |> Enum.filter (fun entry -> entry.Zip.filename <> Inner_db.out_name)
-    |> Enum.map (fun entry ->
-      let filename = Path.of_string entry.Zip.filename in
-      let full_filename = Path.concat db_path filename in
-      let full_filename_s = Path.to_string full_filename in
-      (entry, filename, full_filename_s))
+    let no_conflicts, conflicts =
+      Zip.entries zip_in
+      |> List.filter (fun entry -> entry.Zip.filename <> Inner_db.out_name)
+      |> List.map (fun entry ->
+        let filename = Fpath.v entry.Zip.filename in
+        let full_filename = Fpath.append db_path filename in
+        let full_filename_s = Fpath.to_string full_filename in
+        (entry, filename, full_filename_s))
 
-    |> Enum.switch (fun (_, _, filename) ->
-      not (Sys.file_exists filename))
+      |> List.partition (fun (_, _, filename) ->
+        not (Sys.file_exists filename))
+    in
+    (* No file conflict *)
+    List.iter (fun (entry, _, filename) ->
+      mkfilepath filename;
+      Zip.copy_entry_to_file zip_in entry filename
+    ) no_conflicts;
+    (* Deal with the file conflict *)
+    List.iter (fun (entry, filename, full_filename_s) ->
+      let tmp = Filename.temp_file "papiers" "" in
+      Zip.copy_entry_to_file zip_in entry tmp;
 
-    |> Tuple2.map
-        (* No file conflict *)
-        (Enum.iter (fun (entry, _, filename) ->
-          mkfilepath filename;
-          Zip.copy_entry_to_file zip_in entry filename)
-        )
-        (* Deal with the file conflict *)
-        (Enum.iter (fun (entry, filename, full_filename_s) ->
-          let tmp = Filename.temp_file "papiers" "" in
-          Zip.copy_entry_to_file zip_in entry tmp;
+      if not (file_equal full_filename_s tmp) then
+        (* Real conflict *)
+        match solve_conflict filename with
+        | Rename new_filename ->
+          let full_new_filename = Fpath.append db_path new_filename in
+          let full_new_filename_s = Fpath.to_string full_new_filename in
+          mkfilepath full_new_filename_s;
+          Zip.copy_entry_to_file
+            zip_in
+            entry
+            full_new_filename_s;
+          sources_to_rename := (Source.File filename,
+                                Source.File new_filename)
+                               ::!sources_to_rename
 
-          if not (file_equal full_filename_s tmp) then
-            (* Real conflict *)
-            match solve_conflict filename with
-            | Rename new_filename ->
-              let full_new_filename = Path.concat db_path new_filename in
-              let full_new_filename_s = Path.to_string full_new_filename in
-              mkfilepath full_new_filename_s;
-              Zip.copy_entry_to_file
-                zip_in
-                entry
-                full_new_filename_s;
-              sources_to_rename := (Source.File filename,
-                                    Source.File new_filename)
-              ::!sources_to_rename
+        | Overwrite ->
+          mkfilepath full_filename_s;
+          Zip.copy_entry_to_file zip_in entry full_filename_s
 
-            | Overwrite ->
-              mkfilepath full_filename_s;
-              Zip.copy_entry_to_file zip_in entry full_filename_s
-
-            | Skip ->
-              sources_to_skip := (Source.File filename)::!sources_to_skip
-         ))
-    |> ignore;
+        | Skip ->
+          sources_to_skip := (Source.File filename)::!sources_to_skip
+    ) conflicts;
 
     (* Open the db file of the archive *)
     let db_to_import = Zip.find_entry zip_in Inner_db.out_name
@@ -189,7 +188,7 @@ let import_sources (db_path: Path.t) (zipname: string)
 
 (* Once the archive files are copyied in the repository, we need to merge the
    archive database to the existing one *)
-let import_db (_db_path: Path.t) (current: Inner_db.t) (to_import: Inner_db.t)
+let import_db (_db_path: Fpath.t) (current: Inner_db.t) (to_import: Inner_db.t)
     ~solve_conflict
     =
   (* Build a reverse mapping <source -> document> for the current db *)
@@ -219,7 +218,7 @@ let import_db (_db_path: Path.t) (current: Inner_db.t) (to_import: Inner_db.t)
       |> List.map (fun doc -> (doc, `CurrentDb))
     in
 
-    ignore @@ List.reduce (fun (doc1, loc1) (doc2, loc2) ->
+    ignore @@ CCList.reduce (fun (doc1, loc1) (doc2, loc2) ->
       let clean (doc, loc) =
         match loc with
         | `CurrentDb -> Inner_db.remove current doc.Inner_db.id; rm_doc doc

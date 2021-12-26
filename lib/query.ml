@@ -3,8 +3,6 @@
 (*   See the file LICENSE for copying permission.                             *)
 (******************************************************************************)
 
-open Batteries
-
 let (++) (a, b) (u, v) = (a +. u, b +. v)
 
 let min3 a b c =
@@ -70,14 +68,14 @@ let eval_query_elt ?(exact_match = false) (elt: elt) (doc: Inner_db.document): f
   in
 
   let search u (* in *) v =
-    let u = String.lowercase u and v = String.lowercase v in
+    let u = String.lowercase_ascii u and v = String.lowercase_ascii v in
     if u = v then (1., 0.)
     else if not exact_match then
-      if String.Exceptionless.find v u <> None then
+      if CCString.find ~sub:u v <> -1 then
         (0., 1.)
       else begin
         try
-          String.nsplit v ~by:" "
+          String.split_on_char ' ' v
           |> List.map (ldist u)
           |> List.fold_left (fun acc d -> acc ++ (0., d)) (0., 0.)
         with Not_found ->

@@ -3,10 +3,6 @@
 (*   See the file LICENSE for copying permission.                             *)
 (******************************************************************************)
 
-open Batteries
-
-module Path = BatPathGen.OfString
-
 type kind =
 | Title
 | Authors
@@ -28,7 +24,7 @@ module MPdf = struct
      | _ -> "")
 
   let get_metadata (filename: string) (k: kind) =
-    let cin = open_in filename |> BatIO.to_input_channel in
+    let cin = open_in filename in
     let pdf_in = Pdfio.input_of_channel cin in
     let pdf = Pdfread.pdf_of_input_lazy None None pdf_in in
 
@@ -48,12 +44,12 @@ end
 let get (src: Source.t) (k: kind) =
   match src with
   | Source.File file ->
-    Option.bind (BatPathGen.OfString.ext file) (function
-    | "pdf" ->
+    begin match Fpath.get_ext file with
+    | ".pdf" ->
       begin try
-        let d = MPdf.get_metadata (Path.to_string file) k in
+        let d = MPdf.get_metadata (Fpath.to_string file) k in
         if d <> "" then Some d else None
       with (Pdf.PDFError _) -> None
       end
-    | _ -> None)
+    | _ -> None end
   | _ -> None

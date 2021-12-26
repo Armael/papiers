@@ -9,16 +9,11 @@
 
     The papiers binary itself is implemented using papierslib. *)
 
-(** Filepath handling by Batteries - see
-   [http://ocaml-batteries-team.github.io/batteries-included/hdoc2/BatPathGen.OfString.html]
-   for documentation *)
-module Path : module type of BatPathGen.OfString
-
 (** Module handling papiers sources (eg PDF files...). *)
 module Source : sig
   (** A source can be any URI - file paths are handled specifically. *)
   type t =
-  | File of Path.t
+  | File of Fpath.t
   | Other of string
 
   (** Conversions from and to string. These functions do nothing more than expected
@@ -31,7 +26,7 @@ module Source : sig
 
   (** A mapping function that modifies the file path, if it is one. Do nothing
       in the other case. *)
-  val map_path : (Path.t -> Path.t) -> t -> t
+  val map_path : (Fpath.t -> Fpath.t) -> t -> t
 end
 
 (** Module handling the papiers database, more precisely loading and saving it
@@ -42,20 +37,20 @@ module Db : sig
 
   (** Finds a directory containing a papiers database, starting with the input
       directory, and walking up the successive parents. *)
-  val find : Path.t -> Path.t option
+  val find : Fpath.t -> Fpath.t option
 
   (** Load the database from a location.
 
       The input path should point to directory containing a papiers database (as
       returned by [find] for example). *)
-  val load : Path.t -> t
+  val load : Fpath.t -> t
 
   (** Save a database back to the disk. *)
   val save : t -> unit
 
   (** Return the location of the database (as previously discovered by [find]
       for example). *)
-  val location : t -> Path.t
+  val location : t -> Fpath.t
 end
 
 (** Module handling the documents stored in the database. *)
@@ -166,7 +161,7 @@ end
 (** The main module, providing high level commands. *)
 module Cmd : sig
   (** Initialize a new empty papiers database in the input directory. *)
-  val init : Path.t -> unit
+  val init : Fpath.t -> unit
 
   (** Run the input query on the input database, returning a list of (ids of)
       matching documents. If [exact_match] is set to false, (it is by default)
@@ -191,13 +186,13 @@ module Cmd : sig
   (** Return the files in the repository but that are not indexed (as sources)
       in the database. If [rel_paths] is true (the default) then the paths returned
       are relative to the database location, otherwise they are absolute. *)
-  val status : ?rel_paths:bool -> Db.t -> Path.t list
+  val status : ?rel_paths:bool -> Db.t -> Fpath.t list
 
   (** Export the documents of identifiers [doc_ids] (by default, all of them in
       the database) to a zip archive, which path is provided as input. Returns
       the list of files that could not be exported, as couples [(filepath,
       error)]. *)
-  val export : ?doc_ids:(Document.id list) -> Db.t -> Path.t ->
+  val export : ?doc_ids:(Document.id list) -> Db.t -> Fpath.t ->
     (string * string) list
 
   (** Exception indicating an invalid archive. *)
@@ -207,7 +202,7 @@ module Cmd : sig
       to import has the same name as an existing file in the repository, and is
       different. *)
   type solve_file_already_existing =
-  | Rename of Path.t
+  | Rename of Fpath.t
   | Overwrite
   | Skip
 
@@ -226,8 +221,8 @@ module Cmd : sig
       called when a conflict occurs, to choose what to do.
 
       This function may raise [Invalid_archive]. *)
-  val import: Db.t -> Path.t ->
-    file_already_exists:(Path.t -> solve_file_already_existing) ->
+  val import: Db.t -> Fpath.t ->
+    file_already_exists:(Fpath.t -> solve_file_already_existing) ->
     documents_share_sources:(Document.t -> Document.t -> solve_conflicting_documents) ->
     unit
 end

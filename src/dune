@@ -2,5 +2,5 @@
   (name papiers)
   (public_name papiers)
   (package papiers)
-  (libraries papierslib ANSITerminal camlpdf batteries lambda-term cmdliner
+  (libraries papierslib ANSITerminal camlpdf lambda-term cmdliner
              yojson))

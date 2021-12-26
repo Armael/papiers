@@ -3,7 +3,6 @@
 (*   See the file LICENSE for copying permission.                             *)
 (******************************************************************************)
 
-open Batteries
 open Cmdliner
 open Papierslib
 open Commands
@@ -187,8 +186,13 @@ let import_cmd =
 
 let kwd_converter =
   let parse elt =
+    let split1 s =
+      match String.split_on_char ':' s with
+      | x::ss -> (x, String.concat ":" ss)
+      | [] -> raise Not_found
+    in
     try
-      match String.split elt ~by:":" with
+      match split1 elt with
       | ("id", s) -> (
         try `Ok (Query.Id (int_of_string s)) with
           Failure _ ->

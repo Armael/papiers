@@ -3,9 +3,7 @@
 (*   See the file LICENSE for copying permission.                             *)
 (******************************************************************************)
 
-open Batteries
-
-module PathGen = BatPathGen.OfString
+open Preludelib
 
 type document_content = {
   name: string;
@@ -52,7 +50,7 @@ let fold f db acc =
   IntH.fold (fun _ doc acc -> f doc acc) db.table acc
 
 let map f db =
-  IntH.map_inplace (fun _ doc -> f doc) db.table
+  IntH.filter_map_inplace (fun _ doc -> Some (f doc)) db.table
 
 exception Found of document
 
@@ -108,7 +106,7 @@ let document_of_json (json: Json.t): document =
     try
       to_string_option src
       |> Option.map Source.of_string
-    with PathGen.Illegal_char ->
+    with Invalid_argument _ ->
       Printf.eprintf "Invalid path %s. Ignoring it\n"
         (to_string_option src |> Option.get);
       None
@@ -128,8 +126,8 @@ let t_of_json (json: Json.t): t =
   let table =
     json |> to_list
          |> List.map (fun j -> let doc = document_of_json j in (doc.id, doc))
-         |> List.enum
-         |> IntH.of_enum
+         |> List.to_seq
+         |> IntH.of_seq
   in
   let fresh_id = (IntH.fold (fun i _ acc -> max i acc) table 0) + 1 in
   { table; fresh_id }

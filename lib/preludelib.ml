@@ -3,7 +3,7 @@
 (*   See the file LICENSE for copying permission.                             *)
 (******************************************************************************)
 
-open Batteries
+let (|?) o x = CCOption.get_or ~default:x o
 
 (* Return the list of all the files in a given directory, with
    their relative path into the directory. *)

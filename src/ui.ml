@@ -3,7 +3,6 @@
 (*   See the file LICENSE for copying permission.                             *)
 (******************************************************************************)
 
-open Batteries
 open Prelude
 
 open Papierslib
@@ -23,7 +22,7 @@ let print_color style =
   else
     print_string
 
-let display_files (only_files: bool) (files: Path.t list) =
+let display_files (only_files: bool) (files: Fpath.t list) =
   if not only_files then (
     print_string "Files not archived:";
     print_newline ();
@@ -31,10 +30,10 @@ let display_files (only_files: bool) (files: Path.t list) =
     print_newline ();
   );
   List.iter (fun path ->
-               let spath = Path.name path in
+               let spath = Fpath.basename path in
                (* Do not show hidden files who are theorically not papers : *)
                if spath.[0] != '.' then
-                 (print_color C.files (Path.to_string path);
+                 (print_color C.files (Fpath.to_string path);
                   print_newline ()))
             files
 
@@ -78,37 +77,37 @@ let display_doc (doc: Document.t) =
 (******************************************************************************)
 
 let query_title ?title () =
-  read_line ~prompt:"Title: " ?initial_text:title () |> String.strip
+  read_line ~prompt:"Title: " ?initial_text:title () |> String.trim
 
 let query_authors ?authors () =
   read_line ~prompt:"Authors (comma separated): " ?initial_text:authors ()
-  |> String.nsplit ~by:","
-  |> List.map String.strip
+  |> String.split_on_char ','
+  |> List.map String.trim
 
 let query_tags ?tags () =
   read_line ~prompt:"Tags (comma separated): " ?initial_text:tags ()
-  |> String.nsplit ~by:","
-  |> List.map String.strip
+  |> String.split_on_char ','
+  |> List.map String.trim
 
 let query_lang ?lang () =
-  read_line ~prompt:"Language: " ?initial_text:lang () |> String.strip
+  read_line ~prompt:"Language: " ?initial_text:lang () |> String.trim
 
 let query_doc_infos ?infos doc_name =
-  Option.may (Printf.printf "Querying metadata for \"%s\":\n%!") doc_name;
-  let title = query_title ?title:(Option.bind infos Tuple4.first) ()
-  and authors = query_authors ?authors:(Option.bind infos Tuple4.second) ()
-  and tags = query_tags ?tags:(Option.bind infos Tuple4.third) ()
-  and lang = query_lang ?lang:(Option.bind infos Tuple4.fourth) () in
+  Option.iter (Printf.printf "Querying metadata for \"%s\":\n%!") doc_name;
+  let title = query_title ?title:(Option.bind infos (fun (a,_,_,_) -> a)) ()
+  and authors = query_authors ?authors:(Option.bind infos (fun (_,b,_,_) -> b)) ()
+  and tags = query_tags ?tags:(Option.bind infos (fun (_,_,c,_) -> c)) ()
+  and lang = query_lang ?lang:(Option.bind infos (fun (_,_,_,d) -> d)) () in
 
   title, authors, tags, lang
 
-let query_sources (db_path: Path.t) =
+let query_sources (db_path: Fpath.t) =
   read_line ~prompt:"Sources (comma separated): " ()
-  |> String.nsplit ~by:","
-  |> List.map String.strip
+  |> String.split_on_char ','
+  |> List.map String.trim
   |> List.map (import_source ~check_file_exists:true db_path)
 
-let query_doc (db_path: Path.t) =
+let query_doc (db_path: Fpath.t) =
   let title = query_title ()
   and authors = query_authors ()
   and sources = query_sources db_path
@@ -127,7 +126,7 @@ let select_char (choices: (char * 'a) list) =
       print_newline ();
 
     print_string "[";
-    iter_effect_tl (print_char % fst) (fun () -> print_char '/') choices;
+    iter_effect_tl CCFun.(print_char % fst) (fun () -> print_char '/') choices;
     print_string "] ? ";
     Printf.printf "%!";
 
@@ -142,15 +141,15 @@ let query_multi_choices (choices: (char * string * 'a) list) =
     Printf.printf "[%c] %s\n%!" c explain
   ) choices;
 
-  select_char (List.map Tuple3.get13 choices)
+  select_char (List.map (fun (a,_,c) -> (a, c)) choices)
 
 (******************************************************************************)
 (* Conflict solving (for the [import] command)                                  *)
 (******************************************************************************)
 
-let file_already_exists (filename: Path.t) =
+let file_already_exists (filename: Fpath.t) =
   Printf.printf "%s already exists (and is different). What do?\n"
-    (Path.to_string filename);
+    (Fpath.to_string filename);
   
   match query_multi_choices [
     'r', "Rename the file to import", `R;
@@ -160,15 +159,16 @@ let file_already_exists (filename: Path.t) =
   ]
   with
   | `R ->
-    Printf.printf "Rename %s to: " (Path.name filename);
+    Printf.printf "Rename %s to: " (Fpath.basename filename);
     let new_name = input_line stdin in
-    `Rename (Path.map_name (const new_name) filename)
+    let filename = Fpath.add_seg (fst @@ Fpath.split_base filename) new_name in
+    `Rename filename
       
   | `Overwrite -> `Overwrite
   | `Skip -> `Skip
   | `Quit -> `Quit
     
-let docs_share_source (db_path: Path.t) doc1 doc2 =
+let docs_share_source (db_path: Fpath.t) doc1 doc2 =
   let open Document in
   let sort = (fun x -> List.sort compare x) in
   
@@ -184,8 +184,8 @@ let docs_share_source (db_path: Path.t) doc1 doc2 =
       `MergeTo (
         doc1.content.name,
         doc1.content.authors,
-        List.unique_cmp (doc1.content.source @ doc2.content.source),
-        List.unique_cmp (doc1.content.tags @ doc2.content.tags),
+        CCList.sort_uniq ~cmp:Stdlib.compare (doc1.content.source @ doc2.content.source),
+        CCList.sort_uniq ~cmp:String.compare (doc1.content.tags @ doc2.content.tags),
         doc1.content.lang
       )
   else begin
@@ -209,24 +209,26 @@ This isn't allowed. What do?\n\n";
       print_newline ();
 
       let title = query_multi_choices [
-        'f', "Use the first document's title", const doc1.content.name;
-        's', "Use the second document's title", const doc2.content.name;
+        'f', "Use the first document's title", CCFun.const doc1.content.name;
+        's', "Use the second document's title", CCFun.const doc2.content.name;
         'm', "Manually define a new title", (fun () -> query_title ());
       ] () in
 
       let authors = query_multi_choices [
-        'f', "Use the first document's author(s)", const doc1.content.authors;
-        's', "Use the second document's author(s)", const doc2.content.authors;
+        'f', "Use the first document's author(s)", CCFun.const doc1.content.authors;
+        's', "Use the second document's author(s)", CCFun.const doc2.content.authors;
         'b', "Use authors of both documents",
-          (fun () -> List.unique_cmp (doc1.content.authors @ doc2.content.authors));
+          (fun () -> CCList.sort_uniq ~cmp:String.compare
+              (doc1.content.authors @ doc2.content.authors));
         'm', "Define manually the author(s)", (fun () -> query_authors ());
       ] () in
 
       let sources () = query_multi_choices [
-        'f', "Use the first document's source(s)", const doc1.content.source;
-        's', "Use the second document's source(s)", const doc2.content.source;
+        'f', "Use the first document's source(s)", CCFun.const doc1.content.source;
+        's', "Use the second document's source(s)", CCFun.const doc2.content.source;
         'b', "Use the sources of both documents",
-          (fun () -> List.unique_cmp (doc1.content.source @ doc2.content.source));
+          (fun () -> CCList.sort_uniq ~cmp:Stdlib.compare
+              (doc1.content.source @ doc2.content.source));
         'm', "Define manually the source(s)",
           (fun () -> query_sources db_path);
       ] () in
@@ -237,16 +239,17 @@ This isn't allowed. What do?\n\n";
       let sources = get_sources () in
       
       let tags = query_multi_choices [
-        'f', "Use the first document's tag(s)", const doc1.content.tags;
-        's', "Use the second document's tag(s)", const doc2.content.tags;
+        'f', "Use the first document's tag(s)", CCFun.const doc1.content.tags;
+        's', "Use the second document's tag(s)", CCFun.const doc2.content.tags;
         'b', "Use tags of both documents",
-          (fun () -> List.unique_cmp (doc1.content.tags @ doc2.content.tags));
+          (fun () -> CCList.sort_uniq ~cmp:String.compare
+              (doc1.content.tags @ doc2.content.tags));
         'm', "Define manually the tag(s)", (fun () -> query_tags ());
       ] () in
 
       let lang = query_multi_choices [
-        'f', "Use the first document's language", const doc1.content.lang;
-        's', "Use the second document's language", const doc2.content.lang;
+        'f', "Use the first document's language", CCFun.const doc1.content.lang;
+        's', "Use the second document's language", CCFun.const doc2.content.lang;
         'm', "Manually define a new language", (fun () -> query_lang ());
       ] () in
 

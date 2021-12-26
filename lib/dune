@@ -1,4 +1,4 @@
 (library
   (name papierslib)
   (public_name papierslib)
-  (libraries batteries camlpdf uri yojson camlzip))
+  (libraries camlpdf uri yojson camlzip fpath containers))

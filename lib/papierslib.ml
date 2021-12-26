@@ -3,35 +3,33 @@
 (*   See the file LICENSE for copying permission.                             *)
 (******************************************************************************)
 
-open Batteries
 open Preludelib
 
-module Path = BatPathGen.OfString
 module Source = Source
 module Inner_db = Inner_db
 (* module Source = Papierslib__Source
  * module Inner_db = Papierslib__Inner_db *)
 
 module Db = struct
-  type t = Inner_db.t * Path.t
+  type t = Inner_db.t * Fpath.t
 
-  let find (pth: Path.t): Path.t option =
-    let open Path in
-
-    let has_db (dir: Path.t) =
-      let db = append dir Inner_db.out_name |> to_string in
+  let find (pth: Fpath.t): Fpath.t option =
+    let has_db (dir: Fpath.t) =
+      let db = Fpath.(dir / Inner_db.out_name) |> Fpath.to_string in
       Sys.file_exists db && (not (Sys.is_directory db))
     in
+    let rec loop p =
+      if Fpath.is_root p then None
+      else if has_db p then Some p
+      else loop (Fpath.parent p)
+    in loop pth
 
-    let parents = Enum.seq pth (normalize % parent) ((<>) root) in
-    Enum.Exceptionless.find has_db parents
+  let db_name (p: Fpath.t) =
+    Fpath.(p / Inner_db.out_name) |> Fpath.to_string
 
-  let db_name (p: Path.t) =
-    Path.append p Inner_db.out_name |> Path.to_string
-
-  let load (p: Path.t): t = (Inner_db.load (db_name p), p)
+  let load (p: Fpath.t): t = (Inner_db.load (db_name p), p)
   let save ((db, p): t) = Inner_db.store (db_name p) db
-  let location ((_, p): t): Path.t = p
+  let location ((_, p): t): Fpath.t = p
 end
 
 module Document = struct
@@ -58,7 +56,7 @@ module Document = struct
       {doc with content =
           {doc.content with
             source = List.map (function
-            | Source.File f -> Source.File (Path.concat p f)
+            | Source.File f -> Source.File (Fpath.append p f)
             | s -> s) doc.content.source
           }
       }
@@ -78,12 +76,13 @@ module Document = struct
           {doc.content with
             source = List.map (function
             | Source.File f -> Source.File (
-              if not (Path.is_relative f) then
-                try Path.relative_to_parent p f
-                with Path.Not_parent -> raise Source_outside_repo
+              if not (Fpath.is_rel f) then
+                match Fpath.relativize ~root:p f with
+                | Some f' -> f'
+                | None -> raise Source_outside_repo
               else
                 f
-              |> Path.normalize
+              |> Fpath.normalize
             )
             | s -> s
             ) doc.content.source}
@@ -105,10 +104,10 @@ module Archive = Archive
  * module Archive = Papierslib__Archive *)
 
 module Cmd = struct
-  let init (dir: Path.t) =
+  let init (dir: Fpath.t) =
     let empty_db = Inner_db.create () in
-    mkpath (Path.to_string dir);
-    Inner_db.store Path.(append dir Inner_db.out_name |> to_string) empty_db
+    mkpath (Fpath.to_string dir);
+    Inner_db.store Fpath.(dir / Inner_db.out_name |> to_string) empty_db
 
   let search ?(exact_match = false) ((db, _): Db.t) (query: Query.t) =
     Inner_db.fold (fun doc acc -> (Query.eval ~exact_match query doc, doc)::acc) db []
@@ -118,18 +117,20 @@ module Cmd = struct
     |> List.map (fun doc -> doc.Inner_db.id)
 
   let lucky ?(exact_match = false) (db: Db.t) (query: Query.t) =
-    List.Exceptionless.hd (search ~exact_match db query)
+    match search ~exact_match db query with
+    | [] -> None
+    | x :: _ -> Some x
 
   let rename ?(src_ids = [])
       (f: title:string -> authors:string list -> string)
       ((db, _): Db.t)
       (doc_id: Document.id)
       =
-    let check_idx = if src_ids = [] then const true else flip List.mem src_ids in
+    let check_idx = if src_ids = [] then CCFun.const true else CCFun.flip List.mem src_ids in
     let resolve_conflict =
       let already_used = Hashtbl.create 37 in
       fun path ->
-        match Hashtbl.Exceptionless.find already_used path with
+        match Hashtbl.find_opt already_used path with
         | Some i ->
           Hashtbl.replace already_used path (i+1);
           let (parent, base, ext) = path in
@@ -148,12 +149,14 @@ module Cmd = struct
           let newname = f
             ~title:doc.Inner_db.content.Inner_db.name
             ~authors:doc.Inner_db.content.Inner_db.authors in
-          let newpath = Path.map
-            (resolve_conflict % Tuple3.map2 (const newname))
-            path
+          let newpath =
+            let parent, f = Fpath.split_base path in
+            let _, ext = Fpath.split_ext ~multi:true f in
+            let (parent, base, ext) = resolve_conflict (parent, newname, ext) in
+            Fpath.add_ext ext (Fpath.add_seg parent base)
           in
-          let before = Path.to_string path in
-          let after = Path.to_string newpath in
+          let before = Fpath.to_string path in
+          let after = Fpath.to_string newpath in
           Unix.rename before after;
           renames := (before, after) :: !renames;
           Source.File newpath
@@ -166,8 +169,8 @@ module Cmd = struct
     !renames
 
   let status ?(rel_paths = true) ((db, db_path): Db.t) =
-    let files = explore_directory (Path.to_string db_path)
-                |> List.map (Path.(normalize % of_string)) in
+    let files = explore_directory (Fpath.to_string db_path)
+                |> List.map (CCFun.(Fpath.(normalize % v))) in
     let sources =  Inner_db.fold
                    (fun doc acc ->
                      List.filter_map
@@ -179,19 +182,20 @@ module Cmd = struct
                    db [] in
 
   let dsources, fsources =
-    List.enum sources
-    |> Enum.filter (Sys.file_exists % Path.to_string)
-    |> Enum.partition (Sys.is_directory % Path.to_string)
-    |> Tuple2.map List.of_enum (Hashtbl.of_enum % Enum.map (fun x -> x, ()))
+    let open CCFun in
+    sources
+    |> List.filter (Sys.file_exists % Fpath.to_string)
+    |> List.partition (Sys.is_directory % Fpath.to_string)
+    |> CCPair.map id (Hashtbl.of_seq % List.to_seq % List.map (fun x -> x, ()))
   in
 
   List.filter (fun f -> not (
     Hashtbl.mem fsources f
-    || List.exists (fun ds -> Path.belongs ds f) dsources
+    || List.exists (fun ds -> Fpath.is_rooted ~root:ds f) dsources
   )) files
-  |> List.map (fun p -> if rel_paths then p else Path.concat db_path p)
+  |> List.map (fun p -> if rel_paths then p else Fpath.append db_path p)
 
-  let export ?(doc_ids = []) ((db, db_path): Db.t) (out_path: Path.t) =
+  let export ?(doc_ids = []) ((db, db_path): Db.t) (out_path: Fpath.t) =
     let exported_db =
       if doc_ids = [] then
         db
@@ -203,11 +207,11 @@ module Cmd = struct
         ) doc_ids;
         new_db
       end in
-    Archive.export exported_db db_path (Path.to_string out_path)
+    Archive.export exported_db db_path (Fpath.to_string out_path)
 
   exception Invalid_archive
   type solve_file_already_existing = Archive.solve_file_already_existing =
-  | Rename of Path.t
+  | Rename of Fpath.t
   | Overwrite
   | Skip
 
@@ -216,9 +220,9 @@ module Cmd = struct
   | KeepOnlySecond
   | MergeTo of Document.content
 
-  let import ((db, db_path): Db.t) (zipfile: Path.t)
+  let import ((db, db_path): Db.t) (zipfile: Fpath.t)
       ~file_already_exists ~documents_share_sources =
-    let to_import: Inner_db.t = Archive.import_sources db_path (Path.to_string zipfile)
+    let to_import: Inner_db.t = Archive.import_sources db_path (Fpath.to_string zipfile)
       ~solve_conflict:file_already_exists
     in
     Archive.import_db db_path db to_import

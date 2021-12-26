@@ -3,9 +3,9 @@
 (*   See the file LICENSE for copying permission.                             *)
 (******************************************************************************)
 
-open Batteries
-
 open Papierslib
+
+let (|?) o x = CCOption.get_or ~default:x o
 
 let iter_effect_tl (f: 'a -> unit) (effect: unit -> unit) (l: 'a list) =
   match l with
@@ -61,8 +61,8 @@ let explore_directory (dir: string) =
 
 let in_path (name: string): bool =
   Sys.getenv "PATH"
-  |> String.nsplit ~by:":"
-  |> List.Exceptionless.find (fun dir ->
+  |> String.split_on_char ':'
+  |> List.find_opt (fun dir ->
     Sys.file_exists (Filename.concat dir name))
   |> Option.is_some
 
@@ -94,54 +94,54 @@ let read_line ?(prompt = "") ?(initial_text = "") () =
 
 (* Take [path], relative to the current working directory, and output
    the absolute path *)
-let full_path_in_cwd (path: Path.t) =
-  if Path.is_relative path then
-    Path.(
-      concat
-        (of_string (Unix.getcwd ()))
+let full_path_in_cwd (path: Fpath.t) =
+  if Fpath.is_rel path then
+    Fpath.(
+      append
+        (v (Unix.getcwd ()))
         path
     )
   else
     path
 
 (* Output [path] relatively to [db_base_path] *)
-let relative_path (db_path: Path.t) (path: Path.t) =
-  try
-    Path.relative_to_parent db_path path
-  with Path.Not_parent -> path
+let relative_path (db_path: Fpath.t) (path: Fpath.t) =
+  match Fpath.relativize ~root:db_path path with
+  | Some p -> p
+  | None -> path
 
 (* Relocate [path] to be relative to the database location [db_path] *)
-let relocate (db_path: Path.t) (path: Path.t) =
+let relocate (db_path: Fpath.t) (path: Fpath.t) =
   let relocated = path
     |> full_path_in_cwd
     |> relative_path db_path
-    |> Path.normalize
+    |> Fpath.normalize
   in
-  if Path.is_absolute relocated then (
+  if Fpath.is_abs relocated then (
     (* [path] was not pointing to a file in the repository *)
     Printf.eprintf "Error: %s is outside repository\n"
-      (Path.to_string path);
+      (Fpath.to_string path);
     exit 1
   );
   relocated
 
 (* Take [path], relative to the db location, and output the absolute
    path *)
-let full_path_in_db (db_path: Path.t) (path: Path.t) =
-  if Path.is_relative path then
-    Path.concat db_path path
+let full_path_in_db (db_path: Fpath.t) (path: Fpath.t) =
+  if Fpath.is_rel path then
+    Fpath.append db_path path
   else
     path
 
 (* Import a source string *)
 let import_source
     ?(check_file_exists = true)
-    (db_path: Path.t)
+    (db_path: Fpath.t)
     (src: string) =
   Source.of_string src
   |> Source.map_path (fun path ->
     if check_file_exists then (
-      let full_path = full_path_in_cwd path |> Path.to_string in
+      let full_path = full_path_in_cwd path |> Fpath.to_string in
       if not (Sys.file_exists full_path) then
         failwith (Printf.sprintf "%s doesn't exist" full_path)
     );

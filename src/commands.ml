@@ -3,15 +3,11 @@
 (*   See the file LICENSE for copying permission.                             *)
 (******************************************************************************)
 
-open Batteries
 open Prelude
-
 open Papierslib
 
-module Glob = BatGlobal
-
-(* Path to the directory that contains the database *)
-let db_base_path = Db.find (Sys.getcwd () |> Path.of_string)
+(* Fpath to the directory that contains the database *)
+let db_base_path = Db.find (Sys.getcwd () |> Fpath.v)
 
 let get_db_path () =
   match db_base_path with
@@ -43,7 +39,7 @@ let str_of_action = function
   | `Del -> "Del"
 
 let check_sources (srcs: string list) =
-  try let nexist = List.find (neg Sys.file_exists) srcs in
+  try let nexist = List.find (CCFun.negate Sys.file_exists) srcs in
       `Error (nexist ^ " is not a valid source")
   with Not_found -> `Ok
 
@@ -56,7 +52,7 @@ let check_ids (ids: string list) =
 
 (* Initialize *)
 let initialize (dir: string) =
-  Cmd.init (Path.of_string dir)
+  Cmd.init (Fpath.v dir)
 
 (* Search *)
 let search short exact_match max_res query =
@@ -72,7 +68,7 @@ let search short exact_match max_res query =
   in
 
   ranked_docs
-  |> (Option.map List.take max_res |? identity)
+  |> (Option.map CCList.take max_res |? CCFun.id)
   |> display
 
 (* Doc *)
@@ -81,7 +77,7 @@ let document action arg =
 
   let source_already_exists (source: Source.t) =
     Document.find_opt db (fun doc ->
-      List.Exceptionless.find ((=) source) (sources doc)
+      List.find_opt ((=) source) (sources doc)
       |> Option.is_some
     )
     |> Option.is_some
@@ -95,7 +91,7 @@ let document action arg =
 
     let check = List.filter_map (fun src ->
       match src with
-      | Source.File f -> Some Path.(concat db_path f |> to_string)
+      | Source.File f -> Some Fpath.(append db_path f |> to_string)
       | _ -> None
     ) sources |> check_sources in
 
@@ -255,37 +251,13 @@ let show short ids =
 
 (* Status *)
 let status name_only =
-  let db = load_db ()
-  and path_db = get_db_path () in
-  let files = explore_directory (Path.to_string path_db)
-              |> List.map (Path.(normalize % of_string)) in
-  let sources =  Document.fold
-                 (fun doc acc ->
-                    List.filter_map
-                      (function
-                      | Source.File s -> Some s
-                      | Source.Other _ -> None)
-                      (sources doc)
-                   @ acc)
-                 db [] in
-
-  let dsources, fsources =
-    List.enum sources
-    |> Enum.filter (Sys.file_exists % Path.to_string)
-    |> Enum.partition (Sys.is_directory % Path.to_string)
-    |> Tuple2.map List.of_enum (Hashtbl.of_enum % Enum.map (fun x -> x, ()))
-  in
-
-  let res = List.filter (fun f -> not (
-    Hashtbl.mem fsources f
-    || List.exists (fun ds -> Path.belongs ds f) dsources
-  )) files in
-  Ui.display_files name_only res
+  let db = load_db () in
+  Ui.display_files name_only (Cmd.status db)
 
 (* Export *)
 let export zipname doc_ids =
   let db = load_db () in
-  let failures = Cmd.export ~doc_ids db (Path.of_string zipname) in
+  let failures = Cmd.export ~doc_ids db (Fpath.v zipname) in
   List.iter (fun (file, err) ->
     Printf.printf "Couldn't export %s: %s\n" file err
   ) failures
@@ -294,7 +266,7 @@ let export zipname doc_ids =
 let import zipname =
   let db = load_db () in
   try
-    Cmd.import db (Path.of_string zipname)
+    Cmd.import db (Fpath.v zipname)
       ~file_already_exists:
       (fun filename -> match Ui.file_already_exists filename with
       | `Rename f -> Cmd.Rename f
@@ -341,4 +313,4 @@ let open_src id src_ids =
 (* Search and open the first source of the first document found *)
 let lucky exact_match query =
   Cmd.lucky ~exact_match (load_db ()) query
-  |> Option.may (fun doc_id -> open_src doc_id [0] |> ignore)
+  |> Option.iter (fun doc_id -> open_src doc_id [0] |> ignore)
